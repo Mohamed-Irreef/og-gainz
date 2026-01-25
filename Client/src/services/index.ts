@@ -1,0 +1,9 @@
+// Barrel export for all services
+export { mealService } from './mealService';
+export { cartService } from './cartService';
+export { subscriptionService } from './subscriptionService';
+export { userService } from './userService';
+export { walletService } from './walletService';
+export { consultationService } from './consultationService';
+export { ordersService } from './ordersService';
+export { adminDashboardService } from './adminDashboardService';

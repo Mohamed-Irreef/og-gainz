@@ -1,0 +1,53 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "OG Gainz is a scalable meal subscription and fitness-focused platform designed to deliver personalized meal plans, add-ons, and subscriptions, with seamless user experience and admin management. It focuses on performance, scalability, and real-world production readiness to support high concurrent users.",
+  "keywords": [
+    "mern",
+    "nodejs",
+    "express",
+    "backend",
+    "api",
+    "rest-api",
+    "mongodb",
+    "mongoose",
+    "scalable",
+    "microservices",
+    "cloud-native",
+    "fitness",
+    "meal-subscription",
+    "nutrition",
+    "ecommerce",
+    "subscription-platform",
+    "admin-dashboard",
+    "high-availability",
+    "performance",
+    "production-ready"
+  ],
+  "license": "ISC",
+  "author": "Mohamed Irreef S",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed:meals-addons": "node src/scripts/seedMealsAndAddons.js",
+    "smoke:byo:public": "node src/scripts/smokeByoPublic.js",
+    "smoke:byo:seed": "node src/scripts/smokeByoSeedAndFetch.js",
+		"smoke:distance": "node src/scripts/smokeDistanceEngine.js",
+    "smoke:webhook": "node scripts/testRazorpayWebhook.js",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "cloudinary": "^2.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "google-auth-library": "^10.5.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.1.1",
+    "multer": "^2.0.2",
+    "nodemon": "^3.1.11",
+    "razorpay": "^2.9.6"
+  }
+}

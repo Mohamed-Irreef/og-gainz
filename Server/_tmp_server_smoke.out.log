@@ -1,0 +1,6 @@
+[dotenv@17.2.3] injecting env (28) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[36m[2026-01-25T07:43:10.639Z] [INFO][0m ✅ MongoDB Connected: 127.0.0.1
+[36m[2026-01-25T07:43:10.641Z] [INFO][0m 📦 Database: og-gainz
+[36m[2026-01-25T07:43:10.644Z] [INFO][0m 🚀 OG Gainz Server started
+[36m[2026-01-25T07:43:10.644Z] [INFO][0m 📍 Environment: development
+[36m[2026-01-25T07:43:10.645Z] [INFO][0m 🔌 Listening on port: 5000
