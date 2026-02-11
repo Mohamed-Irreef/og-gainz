@@ -27,6 +27,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   Carousel,
+  type CarouselApi,
   CarouselContent,
   CarouselItem,
   CarouselNext,
@@ -202,7 +203,7 @@ function TestimonialCarousel({ testimonials }: { testimonials: Testimonial[] }) 
 
   const slideVariants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? 1000 : -1000,
+      x: direction > 0 ? 300 : -300,
       opacity: 0,
       scale: 0.9,
     }),
@@ -214,7 +215,7 @@ function TestimonialCarousel({ testimonials }: { testimonials: Testimonial[] }) 
     },
     exit: (direction: number) => ({
       zIndex: 0,
-      x: direction < 0 ? 1000 : -1000,
+      x: direction < 0 ? 300 : -300,
       opacity: 0,
       scale: 0.9,
     }),
@@ -224,7 +225,7 @@ function TestimonialCarousel({ testimonials }: { testimonials: Testimonial[] }) 
     <div className="mx-auto mt-12 max-w-5xl">
       <div className="relative overflow-hidden px-4">
         {/* Testimonial Cards */}
-        <div className="relative h-[280px] md:h-[240px]">
+        <div className="relative min-h-[280px] md:h-[240px]">
           <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
               key={currentIndex}
@@ -241,61 +242,110 @@ function TestimonialCarousel({ testimonials }: { testimonials: Testimonial[] }) 
               className="absolute inset-0"
             >
               <div className="grid h-full gap-6 md:grid-cols-2">
-                {[
-                  testimonials[currentIndex],
-                  testimonials[(currentIndex + 1) % testimonials.length],
-                ].map((testimonial, idx) => (
-                  <motion.div
-                    key={`${currentIndex}-${idx}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.1, duration: 0.5 }}
-                  >
-                    <Card className="group relative h-full overflow-hidden border-2 border-oz-primary/30 bg-gradient-to-br from-white via-oz-neutral/5 to-oz-primary/5 shadow-lg transition-all duration-500 hover:scale-[1.02] hover:border-oz-primary/50 hover:shadow-xl">
-                      {/* Decorative quote icon */}
-                      <div className="absolute right-4 top-4 opacity-5 transition-opacity duration-300 group-hover:opacity-10">
-                        <Quote className="h-20 w-20 text-oz-primary" />
+                {/* First card - always visible */}
+                <motion.div
+                  key={`${currentIndex}-0`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0, duration: 0.5 }}
+                >
+                  <Card className="group relative h-full overflow-hidden border-2 border-oz-primary/30 bg-gradient-to-br from-white via-oz-neutral/5 to-oz-primary/5 shadow-lg transition-all duration-500 hover:scale-[1.02] hover:border-oz-primary/50 hover:shadow-xl">
+                    {/* Decorative quote icon */}
+                    <div className="absolute right-4 top-4 opacity-5 transition-opacity duration-300 group-hover:opacity-10">
+                      <Quote className="h-20 w-20 text-oz-primary" />
+                    </div>
+                    
+                    {/* Glow effect */}
+                    <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-oz-accent/5 blur-2xl transition-all duration-500 group-hover:bg-oz-accent/10" />
+                    
+                    <CardHeader className="relative space-y-2 pb-3">
+                      <div className="flex items-center justify-between">
+                        <motion.div
+                          whileHover={{ scale: 1.05 }}
+                          className="inline-flex"
+                        >
+                          <Stars rating={testimonials[currentIndex].rating} />
+                        </motion.div>
                       </div>
                       
-                      {/* Glow effect */}
-                      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-oz-accent/5 blur-2xl transition-all duration-500 group-hover:bg-oz-accent/10" />
-                      
-                      <CardHeader className="relative space-y-2 pb-3">
-                        <div className="flex items-center justify-between">
-                          <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            className="inline-flex"
-                          >
-                            <Stars rating={testimonial.rating} />
-                          </motion.div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-oz-primary text-lg font-bold text-white shadow-md ring-2 ring-oz-primary/20 transition-transform duration-300 group-hover:scale-110">
+                          {testimonials[currentIndex].name[0]}
                         </div>
-                        
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-oz-primary text-lg font-bold text-white shadow-md ring-2 ring-oz-primary/20 transition-transform duration-300 group-hover:scale-110">
-                            {testimonial.name[0]}
-                          </div>
-                          <div className="min-w-0">
-                            <CardTitle className="text-lg font-bold text-oz-primary">
-                              {testimonial.name}
-                            </CardTitle>
-                            <CardDescription className="text-xs font-medium text-muted-foreground">
-                              {testimonial.role}
-                            </CardDescription>
-                          </div>
+                        <div className="min-w-0">
+                          <CardTitle className="text-lg font-bold text-oz-primary">
+                            {testimonials[currentIndex].name}
+                          </CardTitle>
+                          <CardDescription className="text-xs font-medium text-muted-foreground">
+                            {testimonials[currentIndex].role}
+                          </CardDescription>
                         </div>
-                      </CardHeader>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="relative pb-5 pt-1">
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        "{testimonials[currentIndex].quote}"
+                      </p>
                       
-                      <CardContent className="relative pb-5 pt-1">
-                        <p className="text-sm leading-relaxed text-muted-foreground">
-                          "{testimonial.quote}"
-                        </p>
-                        
-                        {/* Bottom accent line */}
-                        <div className="mt-4 h-1 w-12 rounded-full bg-gradient-to-r from-oz-accent to-oz-primary transition-all duration-300 group-hover:w-20" />
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
+                      {/* Bottom accent line */}
+                      <div className="mt-4 h-1 w-12 rounded-full bg-gradient-to-r from-oz-accent to-oz-primary transition-all duration-300 group-hover:w-20" />
+                    </CardContent>
+                  </Card>
+                </motion.div>
+                
+                {/* Second card - hidden on mobile, visible on desktop */}
+                <motion.div
+                  key={`${currentIndex}-1`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1, duration: 0.5 }}
+                  className="hidden md:block"
+                >
+                  <Card className="group relative h-full overflow-hidden border-2 border-oz-primary/30 bg-gradient-to-br from-white via-oz-neutral/5 to-oz-primary/5 shadow-lg transition-all duration-500 hover:scale-[1.02] hover:border-oz-primary/50 hover:shadow-xl">
+                    {/* Decorative quote icon */}
+                    <div className="absolute right-4 top-4 opacity-5 transition-opacity duration-300 group-hover:opacity-10">
+                      <Quote className="h-20 w-20 text-oz-primary" />
+                    </div>
+                    
+                    {/* Glow effect */}
+                    <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-oz-accent/5 blur-2xl transition-all duration-500 group-hover:bg-oz-accent/10" />
+                    
+                    <CardHeader className="relative space-y-2 pb-3">
+                      <div className="flex items-center justify-between">
+                        <motion.div
+                          whileHover={{ scale: 1.05 }}
+                          className="inline-flex"
+                        >
+                          <Stars rating={testimonials[(currentIndex + 1) % testimonials.length].rating} />
+                        </motion.div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-oz-primary text-lg font-bold text-white shadow-md ring-2 ring-oz-primary/20 transition-transform duration-300 group-hover:scale-110">
+                          {testimonials[(currentIndex + 1) % testimonials.length].name[0]}
+                        </div>
+                        <div className="min-w-0">
+                          <CardTitle className="text-lg font-bold text-oz-primary">
+                            {testimonials[(currentIndex + 1) % testimonials.length].name}
+                          </CardTitle>
+                          <CardDescription className="text-xs font-medium text-muted-foreground">
+                            {testimonials[(currentIndex + 1) % testimonials.length].role}
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="relative pb-5 pt-1">
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        "{testimonials[(currentIndex + 1) % testimonials.length].quote}"
+                      </p>
+                      
+                      {/* Bottom accent line */}
+                      <div className="mt-4 h-1 w-12 rounded-full bg-gradient-to-r from-oz-accent to-oz-primary transition-all duration-300 group-hover:w-20" />
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </div>
             </motion.div>
           </AnimatePresence>
@@ -572,53 +622,53 @@ const FeaturedMealCard = ({ meal }: { meal: Meal }) => {
   const startingPrice = getMinimumWeeklyPrice();
 
   return (
-    <Link to={`/meal-packs/${meal.slug || meal.id}`} className="group block">
-      <Card className="h-full border-2 border-oz-primary/10 bg-white shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-oz-accent overflow-hidden">
-        <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-oz-primary/5 to-oz-accent/5">
-          <img 
-            src={imageUrl} 
+    <Link to={`/meal-packs/${meal.slug || meal.id}`} className="group block h-full">
+      <Card className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/60 bg-white shadow-lg transition-all duration-300 ease-in-out hover:-translate-y-1 hover:shadow-2xl">
+        <div className="relative h-52 w-full overflow-hidden">
+          <img
+            src={imageUrl}
             alt={meal.name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
             onError={(e) => {
               e.currentTarget.src = '/placeholder-meal.png';
             }}
           />
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/40 to-transparent" />
           {meal.isFeatured && (
-            <div className="absolute top-3 right-3">
-              <Badge className="bg-oz-accent text-white font-semibold shadow-lg">
-                <Star className="h-3 w-3 mr-1 fill-current" />
+            <div className="absolute right-4 top-4">
+              <Badge className="rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white shadow-md">
+                <Star className="mr-1 h-3 w-3 fill-current" />
                 Featured
               </Badge>
             </div>
           )}
         </div>
-        <CardContent className="p-5">
-          <h3 className="text-lg font-bold text-oz-primary mb-2 group-hover:text-oz-accent transition-colors">
-            {meal.name}
-          </h3>
-          <p className="text-xs text-oz-primary/60 mb-4 line-clamp-2">
-            {meal.shortDescription || meal.description}
-          </p>
-          
-          <div className="space-y-2 mb-4">
-            <div className="flex items-center gap-2 text-sm">
-              <div className="flex items-center gap-1 text-oz-accent font-semibold">
-                <Dumbbell className="h-4 w-4" />
-                <span>{meal.proteinPerMeal}g</span>
-              </div>
-              <span className="text-oz-primary/40">•</span>
-              <span className="text-oz-primary/70 text-xs">{meal.caloriesRange}</span>
+        <CardContent className="flex flex-1 flex-col px-4 py-4 md:px-5">
+          <div className="flex-1">
+            <h3 className="mb-1.5 text-base font-semibold tracking-tight text-oz-primary md:text-lg">
+              {meal.name}
+            </h3>
+            <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
+              {meal.shortDescription || meal.description}
+            </p>
+            <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-oz-primary/70">
+              <span className="rounded-full bg-green-50 px-3 py-1 text-green-600">
+                {meal.proteinPerMeal}g protein
+              </span>
+              <span className="text-xs text-oz-primary/50">{meal.caloriesRange}</span>
             </div>
           </div>
-          
-          <div className="pt-3 border-t border-oz-primary/10">
-            <div className="flex items-center justify-between">
+
+          <div className="mt-4 border-t border-oz-primary/10 pt-3">
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs text-oz-primary/50">Starting from</p>
-                <p className="text-xl font-bold text-oz-primary">₹{startingPrice}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-oz-primary/50">Starting from</p>
+                <p className="text-2xl font-bold text-oz-primary md:text-3xl">₹{startingPrice}</p>
                 <p className="text-xs text-oz-primary/50">Weekly • 5 Servings</p>
               </div>
-              <ArrowRight className="h-5 w-5 text-oz-accent group-hover:translate-x-1 transition-transform" />
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-green-50 text-oz-primary shadow-sm transition-transform duration-300 group-hover:scale-110">
+                <ArrowRight className="h-4 w-4" />
+              </span>
             </div>
           </div>
         </CardContent>
@@ -677,6 +727,11 @@ const Index = () => {
   const [loadingFeatured, setLoadingFeatured] = useState(true);
   const [showStickyCTA, setShowStickyCTA] = useState(false);
 
+  const [featuredCarouselApi, setFeaturedCarouselApi] = useState<CarouselApi | null>(null);
+  const [featuredCarouselSelectedIndex, setFeaturedCarouselSelectedIndex] = useState(0);
+  const [featuredCarouselSnapCount, setFeaturedCarouselSnapCount] = useState(0);
+  const [isFeaturedCarouselHovered, setIsFeaturedCarouselHovered] = useState(false);
+
   const heroBanners = useMemo<string[]>(() => {
     return isMobile ? [...mobileOnlyHeroBanners] : [...desktopHeroBanners];
   }, [isMobile]);
@@ -723,6 +778,36 @@ const Index = () => {
 
     return () => clearInterval(intervalId);
   }, [whyCarouselApi, isMobile]);
+
+  // Featured meals carousel: track snaps + selection for dots
+  useEffect(() => {
+    if (!featuredCarouselApi) return;
+
+    const updateState = () => {
+      setFeaturedCarouselSnapCount(featuredCarouselApi.scrollSnapList().length);
+      setFeaturedCarouselSelectedIndex(featuredCarouselApi.selectedScrollSnap());
+    };
+
+    updateState();
+    featuredCarouselApi.on("reInit", updateState);
+    featuredCarouselApi.on("select", updateState);
+
+    return () => {
+      featuredCarouselApi.off("reInit", updateState);
+      featuredCarouselApi.off("select", updateState);
+    };
+  }, [featuredCarouselApi]);
+
+  // Featured meals carousel: autoplay every 4s, pause on hover
+  useEffect(() => {
+    if (!featuredCarouselApi || isFeaturedCarouselHovered) return;
+
+    const intervalId = window.setInterval(() => {
+      featuredCarouselApi.scrollNext();
+    }, 4000);
+
+    return () => window.clearInterval(intervalId);
+  }, [featuredCarouselApi, isFeaturedCarouselHovered]);
 
   // Fetch featured meals
   useEffect(() => {
@@ -885,7 +970,7 @@ const Index = () => {
     <div className="animate-fade-in">
       {/* 1️⃣ Hero Section (Above the Fold) */}
       <section
-        className="relative isolate overflow-hidden h-[50vh] md:min-h-[520px]"
+        className="relative isolate overflow-hidden h-[50vh] md:min-h-[520px] bg-gradient-to-b from-green-900/85 via-green-900/75 to-green-900/65"
         data-hero-section
         style={{
           backgroundImage:
@@ -906,24 +991,24 @@ const Index = () => {
         {/* Green fitness overlay */}
         <div className="pointer-events-none absolute inset-0 -z-10" style={{ background: 'linear-gradient(to bottom, rgba(6, 78, 59, 0.55), rgba(6, 78, 59, 0.75))' }} />
         
-        <div className="container mx-auto px-4 py-6 flex items-center h-[50vh] md:min-h-[520px] md:py-18">
-          <div className="w-full max-w-lg mx-auto text-center md:mx-0 md:text-left md:max-w-2xl">
+        <div className="container mx-auto px-4 py-16 flex items-center h-[50vh] md:min-h-[520px] md:py-18">
+          <div className="w-full max-w-md mx-auto text-center space-y-4 md:mx-0 md:text-left md:max-w-2xl md:space-y-5">
             
             {/* Badge / Eyebrow */}
-            <div className="flex justify-center md:justify-start">
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/8 px-3 py-1.5 text-xs sm:text-sm font-medium text-white backdrop-blur-sm">
-                <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-oz-accent" />
+            <div className="mb-2 flex justify-center md:justify-start">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm sm:text-sm">
+                <Sparkles className="h-3 w-3 text-oz-accent sm:h-4 sm:w-4" />
                 <span>Performance Nutrition System</span>
               </div>
             </div>
 
             {/* Main Headline */}
-            <h1 className="mt-4 text-3xl md:text-5xl font-extrabold leading-tight text-white tracking-tight text-center md:text-left">
+            <h1 className="text-2xl font-bold leading-tight text-white tracking-tight text-center max-w-sm mx-auto md:text-left md:text-4xl md:font-extrabold md:max-w-none">
               Nutrition Built for Performance.
             </h1>
 
             {/* Sub-headline */}
-            <p className="mt-3 text-sm md:text-base text-white/90 font-medium text-center md:text-left leading-relaxed">
+            <p className="text-sm leading-relaxed text-white/85 font-medium text-center max-w-sm mx-auto md:mx-0 md:text-left md:text-base mb-4">
               High-protein meals, cooked fresh and delivered daily — designed to help you train better and stay consistent.
             </p>
 
@@ -934,22 +1019,29 @@ const Index = () => {
 
             {/* Dual CTAs */}
             <div className="mt-6 space-y-3">
-              <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
-                <Link to="/consultation">
-                  <Button size="sm" className="w-full sm:w-auto bg-oz-accent hover:bg-oz-accent/90 text-white font-semibold px-6 py-2.5 text-sm shadow-lg transition-all hover:scale-105 active:scale-[0.98]">
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-center md:justify-start">
+                <Link to="/consultation" className="w-full sm:w-auto">
+                  <Button
+                    size="sm"
+                    className="w-full h-12 rounded-xl bg-oz-accent text-sm font-semibold text-white shadow-lg transition-transform duration-200 hover:bg-oz-accent/90 hover:scale-[1.02] active:scale-[0.98]"
+                  >
                     Get Started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
-                <Link to="/meal-packs">
-                  <Button size="sm" variant="outline" className="w-full sm:w-auto border-white/30 bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-2.5 text-sm backdrop-blur-sm transition-all hover:scale-105 active:scale-[0.98]">
+                <Link to="/meal-packs" className="w-full sm:w-auto">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full h-12 rounded-xl border border-white/20 bg-white/10 text-sm font-semibold text-white backdrop-blur-sm transition-transform duration-200 hover:bg-white/15 hover:scale-[1.02] active:scale-[0.98]"
+                  >
                     View Plans
                   </Button>
                 </Link>
               </div>
               
               {/* Trust Line */}
-              <div className="text-center md:text-left text-xs text-white/60">
+              <div className="mt-4 text-center md:text-left text-xs text-white/60">
                 Takes under 60 seconds • Pause or cancel anytime
               </div>
             </div>
@@ -1057,7 +1149,7 @@ const Index = () => {
       </section>
 
       {/* 3️⃣ Featured Meal Plans */}
-      <section className="relative bg-gradient-to-b from-oz-neutral/5 via-white to-oz-neutral/5 py-16 md:py-24">
+      <section className="relative bg-gradient-to-b from-oz-neutral/5 via-white to-oz-neutral/5 py-12 md:py-24">
         {/* Decorative elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-10 right-10 w-72 h-72 bg-oz-accent/5 rounded-full blur-3xl" />
@@ -1065,15 +1157,15 @@ const Index = () => {
         </div>
         
         <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
+          <div className="text-center max-w-3xl mx-auto mb-10 md:mb-16">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-oz-accent/10 border border-oz-accent/20 mb-4">
               <Sparkles className="h-4 w-4 text-oz-accent" />
-              <span className="text-sm font-semibold text-oz-primary">Handpicked For You</span>
+              <span className="text-xs font-semibold text-oz-primary md:text-sm">Handpicked For You</span>
             </div>
-            <h2 className="text-2xl md:text-4xl font-bold text-oz-primary tracking-tight">
+            <h2 className="text-xl font-semibold text-oz-primary tracking-tight md:text-4xl md:font-bold">
               Featured Meal Plans
             </h2>
-            <p className="mt-4 text-base md:text-lg text-oz-primary/70 font-medium">
+            <p className="mt-4 text-sm leading-relaxed text-oz-primary/70 md:text-lg">
               Curated nutrition solutions engineered for peak performance and results.
             </p>
           </div>
@@ -1084,33 +1176,80 @@ const Index = () => {
             </div>
           ) : featuredMeals.length > 0 ? (
             <>
-              {/* Mobile: swipe */}
-              <div className="md:hidden">
-                <Carousel opts={{ align: "start", loop: true }} className="w-full">
-                  <CarouselContent className="-ml-4">
+              {/* Responsive carousel maintained for mobile/tablet */}
+              <div
+                className="relative lg:hidden"
+                onMouseEnter={() => setIsFeaturedCarouselHovered(true)}
+                onMouseLeave={() => setIsFeaturedCarouselHovered(false)}
+              >
+                <Carousel
+                  opts={{ align: "center", loop: true, duration: 40 }}
+                  setApi={setFeaturedCarouselApi}
+                  className="w-full"
+                >
+                  <CarouselContent className="-ml-6">
                     {featuredMeals.map((meal) => (
-                      <CarouselItem key={meal.id} className="pl-4 basis-[90%]">
-                        <FeaturedMealCard meal={meal} />
+                      <CarouselItem
+                        key={meal.id}
+                        className="pl-6 basis-full sm:basis-1/2"
+                      >
+                        <div className="h-full">
+                          <FeaturedMealCard meal={meal} />
+                        </div>
                       </CarouselItem>
                     ))}
                   </CarouselContent>
-                  <div className="mt-8 flex items-center justify-center gap-4">
-                    <CarouselPrevious className="static h-10 w-10 border-2 border-oz-primary/20 hover:border-oz-accent" />
-                    <CarouselNext className="static h-10 w-10 border-2 border-oz-primary/20 hover:border-oz-accent" />
-                  </div>
+
+                  <CarouselPrevious
+                    aria-label="Previous featured meal"
+                    className="left-3 top-1/2 h-10 w-10 -translate-y-1/2 rounded-full border border-white/30 bg-white/70 text-oz-primary shadow-lg backdrop-blur transition-all duration-300 ease-in-out hover:scale-105 hover:bg-white/90"
+                  />
+                  <CarouselNext
+                    aria-label="Next featured meal"
+                    className="right-3 top-1/2 h-10 w-10 -translate-y-1/2 rounded-full border border-white/30 bg-white/70 text-oz-primary shadow-lg backdrop-blur transition-all duration-300 ease-in-out hover:scale-105 hover:bg-white/90"
+                  />
                 </Carousel>
+
+                {/* Pagination dots */}
+                <div
+                  className="mt-6 flex items-center justify-center gap-2"
+                  role="tablist"
+                  aria-label="Featured meals pagination"
+                >
+                  {Array.from({ length: featuredCarouselSnapCount }).map((_, index) => {
+                    const isActive = index === featuredCarouselSelectedIndex;
+
+                    return (
+                      <button
+                        key={index}
+                        type="button"
+                        aria-label={`Go to featured meal slide ${index + 1}`}
+                        aria-current={isActive ? "true" : "false"}
+                        onClick={() => featuredCarouselApi?.scrollTo(index)}
+                        className={
+                          "h-2 rounded-full transition-all duration-300 ease-in-out " +
+                          (isActive
+                            ? "w-7 bg-oz-accent"
+                            : "w-2.5 bg-oz-primary/20 hover:bg-oz-primary/30")
+                        }
+                      />
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Desktop: grid */}
-              <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-6">
-                {featuredMeals.map((meal) => (
-                  <FeaturedMealCard key={meal.id} meal={meal} />
-                ))}
+              {/* Desktop grid */}
+              <div className="hidden lg:block">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {featuredMeals.map((meal) => (
+                    <FeaturedMealCard key={meal.id} meal={meal} />
+                  ))}
+                </div>
               </div>
-              
-              <div className="mt-12 text-center">
+
+              <div className="mt-10 text-center">
                 <Link to="/meal-packs">
-                  <Button size="lg" className="bg-oz-accent hover:bg-oz-accent/90 text-white font-semibold px-8 py-6 text-base shadow-lg hover:shadow-xl transition-all hover:scale-105">
+                  <Button size="lg" className="bg-oz-accent hover:bg-oz-accent/90 text-white text-sm font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105 md:text-base">
                     Explore All Meal Plans
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
@@ -1303,29 +1442,40 @@ const Index = () => {
                   <CardDescription className="text-base">Display-only preview of statuses and schedule clarity.</CardDescription>
                 </CardHeader>
                 <CardContent className="relative">
-                  <div className="rounded-xl border border-oz-neutral/30 bg-gradient-to-br from-oz-neutral/10 to-oz-neutral/20 p-6">
+                  <div className="rounded-2xl bg-white p-5 shadow-md md:rounded-xl md:border md:border-oz-neutral/30 md:bg-gradient-to-br md:from-oz-neutral/10 md:to-oz-neutral/20 md:p-6">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge className="bg-oz-primary text-white hover:bg-oz-primary/90 shadow-sm">Active</Badge>
-                      <Badge variant="secondary" className="shadow-sm">Paused</Badge>
-                      <Badge variant="outline" className="shadow-sm">Skipped</Badge>
+                      <span className="rounded-full bg-green-600 px-3 py-1 text-xs font-medium text-white md:bg-oz-primary">Active</span>
+                      <span className="rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-700 md:bg-oz-neutral/20 md:text-oz-primary">Paused</span>
+                      <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-700 md:border md:border-oz-neutral/40 md:bg-transparent md:text-oz-primary">Skipped</span>
                     </div>
-                    <Separator className="my-5" />
-                    <div className="grid grid-cols-7 gap-2 text-center text-xs">
+                    <Separator className="my-4 md:my-5" />
+                    <div className="grid grid-cols-7 gap-2 text-center text-sm md:text-xs">
                       {["M", "T", "W", "T", "F", "S", "S"].map((d) => (
-                        <div key={d} className="font-semibold text-oz-primary/70">{d}</div>
+                        <div key={d} className="font-semibold text-oz-primary/60">{d}</div>
                       ))}
-                    {Array.from({ length: 28 }).map((_, idx) => {
+                      {Array.from({ length: 28 }).map((_, idx) => {
                         const day = idx + 1;
-                          const tone =
-                            day === 7 || day === 14
-                              ? "border-2 border-oz-primary bg-oz-primary/10 text-oz-primary font-bold shadow-sm hover:scale-110 transition-transform cursor-pointer"
-                            : day === 10
-                              ? "bg-oz-neutral/60 text-oz-primary font-semibold hover:scale-110 transition-transform cursor-pointer"
-                            : day === 18
-                              ? "border-2 border-dashed border-oz-primary/30 text-muted-foreground hover:scale-110 transition-transform cursor-pointer"
-                            : "text-muted-foreground hover:bg-oz-neutral/20 hover:scale-110 transition-all cursor-pointer";
-                          return (
-                            <div key={day} className={`rounded-lg px-2 py-2.5 ${tone}`}>{day}</div>
+                        const isSelected = day === 7 || day === 14;
+                        const isToday = day === 10;
+                        const isSkipped = day === 18;
+
+                        let tone = "text-gray-500 hover:bg-gray-50";
+
+                        if (isSelected) {
+                          tone = "bg-green-600 text-white shadow-md md:bg-oz-primary/10 md:text-oz-primary md:border md:border-oz-primary";
+                        } else if (isToday) {
+                          tone = "border-2 border-green-600 bg-white text-green-700 md:border-0 md:bg-oz-neutral/60 md:text-oz-primary";
+                        } else if (isSkipped) {
+                          tone = "border border-dashed border-gray-400 text-gray-500 md:border-2 md:border-dashed md:border-oz-primary/30 md:text-muted-foreground";
+                        }
+
+                        return (
+                          <div
+                            key={day}
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 ${tone} md:h-auto md:w-auto md:rounded-lg md:px-2 md:py-2.5 md:text-xs`}
+                          >
+                            {day}
+                          </div>
                         );
                       })}
                     </div>
@@ -1734,6 +1884,7 @@ const Index = () => {
               </CardContent>
             </Card>
 
+{/* aja  */}
             {/* Optional CTA */}
             <div className="mt-8 text-center">
               <p className="text-sm text-muted-foreground mb-3">

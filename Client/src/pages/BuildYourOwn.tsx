@@ -14,6 +14,7 @@ import {
 	Flame,
 	Dumbbell,
 } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerClose, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
@@ -136,7 +137,7 @@ function QuantityStepper({
 				<Button
 					variant="outline"
 					size="icon"
-					className="h-11 w-11 sm:h-9 sm:w-9"
+					className="h-11 w-11 min-h-[44px] min-w-[44px] sm:h-9 sm:w-9 transition-transform active:scale-95"
 					disabled={disabled || value === 0}
 					onMouseDown={() => startHold(-1)}
 					onMouseUp={stopHold}
@@ -144,6 +145,7 @@ function QuantityStepper({
 					onTouchStart={() => startHold(-1)}
 					onTouchEnd={stopHold}
 					aria-label={`${label}: decrease`}
+					type="button"
 				>
 					<Minus className="h-4 w-4" />
 				</Button>
@@ -154,7 +156,7 @@ function QuantityStepper({
 			<Button
 				variant="outline"
 				size="icon"
-				className="h-11 w-11 sm:h-9 sm:w-9"
+				className="h-11 w-11 min-h-[44px] min-w-[44px] sm:h-9 sm:w-9 transition-transform active:scale-95"
 				disabled={disabled}
 				onMouseDown={() => startHold(1)}
 				onMouseUp={stopHold}
@@ -162,6 +164,7 @@ function QuantityStepper({
 				onTouchStart={() => startHold(1)}
 				onTouchEnd={stopHold}
 				aria-label={`${label}: increase`}
+				type="button"
 			>
 				<Plus className="h-4 w-4" />
 			</Button>
@@ -204,7 +207,24 @@ function TrayPreview({
 
 	return (
 		<>
-			<Card className="border-oz-neutral/40 bg-gradient-to-br from-white to-oz-neutral/5 shadow-lg">
+			<div className="md:hidden">
+				<Card className="border-oz-neutral/40 bg-white shadow-sm">
+					<CardContent className="flex items-center justify-between gap-3 p-4">
+						<div>
+							<div className="text-sm font-semibold text-oz-primary">Your Meal Tray</div>
+							<div className="text-xs text-muted-foreground">
+								{hasAny ? `${Array.from(groupedSelected.values()).reduce((acc, arr) => acc + arr.length, 0)} ingredients selected` : 'No items yet'}
+							</div>
+						</div>
+						<Button type="button" variant="secondary" className="h-11 rounded-xl px-4 text-sm font-semibold" onClick={() => setIsTrayOpen(true)}>
+							View Tray
+						</Button>
+					</CardContent>
+				</Card>
+			</div>
+
+			<div className="hidden md:block">
+				<Card className="border-oz-neutral/40 bg-gradient-to-br from-white to-oz-neutral/5 shadow-lg">
 			<CardHeader className="pb-4 border-b border-oz-neutral/30">
 				<div className="flex items-center justify-between gap-3">
 					<div className="flex items-center gap-3">
@@ -212,17 +232,17 @@ function TrayPreview({
 							<Sparkles className="h-5 w-5 text-white" />
 						</div>
 						<div>
-							<CardTitle className="text-oz-primary">Your Meal Tray</CardTitle>
+							<CardTitle className="text-base font-semibold text-oz-primary md:text-lg">Your Meal Tray</CardTitle>
 							<div className="text-xs text-muted-foreground mt-0.5">Visual preview of your custom meal</div>
 						</div>
 					</div>
-					{hasAny && (
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => setIsTrayOpen(true)}
-							className="flex items-center gap-2 text-oz-primary hover:bg-oz-primary hover:text-white transition-colors"
-						>
+						{hasAny && (
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => setIsTrayOpen(true)}
+								className="flex items-center gap-2 text-sm font-semibold text-oz-primary hover:bg-oz-primary hover:text-white transition-colors"
+							>
 							<Eye className="h-4 w-4" />
 							View Tray
 						</Button>
@@ -234,13 +254,13 @@ function TrayPreview({
 					<div className="absolute top-0 right-0 w-32 h-32 bg-oz-accent/5 rounded-full blur-3xl" />
 					<div className="absolute bottom-0 left-0 w-32 h-32 bg-oz-primary/5 rounded-full blur-3xl" />
 					<div className="relative">
-						{!hasAny ? (
-							<div className="text-center py-8">
-								<div className="mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br from-oz-accent/20 to-oz-primary/20 flex items-center justify-center border-2 border-dashed border-oz-neutral/40 mb-4">
-									<Sparkles className="h-8 w-8 text-oz-primary/60" />
-								</div>
-								<div className="font-bold text-oz-primary text-lg">Start Building Your Meal</div>
-								<div className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto">
+							{!hasAny ? (
+								<div className="text-center py-8">
+									<div className="mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br from-oz-accent/20 to-oz-primary/20 flex items-center justify-center border-2 border-dashed border-oz-neutral/40 mb-4">
+										<Sparkles className="h-8 w-8 text-oz-primary/60" />
+									</div>
+									<div className="text-base font-semibold text-oz-primary md:text-lg">Start Building Your Meal</div>
+									<div className="text-sm leading-relaxed text-muted-foreground mt-2 max-w-sm mx-auto">
 									Select ingredients below and watch your custom meal come to life here
 								</div>
 							</div>
@@ -303,15 +323,16 @@ function TrayPreview({
 				</div>
 			</CardContent>
 			</Card>
+			</div>
 
 			<Drawer open={isTrayOpen} onOpenChange={setIsTrayOpen}>
 				<DrawerContent className="max-h-[85vh]">
 					<DrawerHeader className="pb-3 border-b border-oz-neutral/30">
-						<DrawerTitle className="text-oz-primary flex items-center gap-2">
+						<DrawerTitle className="text-base font-semibold text-oz-primary flex items-center gap-2 md:text-lg">
 							<div className="h-9 w-9 rounded-xl bg-gradient-to-br from-oz-primary to-oz-primary/80 flex items-center justify-center">
 								<Sparkles className="h-5 w-5 text-white" />
 							</div>
-							<span className="text-lg font-bold">Your Meal Tray</span>
+									<span className="text-base font-semibold md:text-lg">Your Meal Tray</span>
 						</DrawerTitle>
 					</DrawerHeader>
 					<div className="px-4 py-3 overflow-y-auto">
@@ -374,7 +395,7 @@ function TrayPreview({
 					<DrawerFooter className="pt-3 pb-4 border-t border-oz-neutral/30">
 						<DrawerClose asChild>
 							<Button 
-								className="w-full bg-oz-primary hover:bg-oz-primary/90 text-white font-semibold shadow-md"
+								className="w-full bg-oz-primary hover:bg-oz-primary/90 text-sm font-semibold text-white shadow-md"
 							>
 								Close
 							</Button>
@@ -526,11 +547,15 @@ export default function BuildYourOwn() {
 	const totalAnimated = useAnimatedNumber(quote?.total || 0);
 	const proteinAnimated = useAnimatedNumber(quote?.proteinGrams || 0);
 	const caloriesAnimated = useAnimatedNumber(typeof quote?.calories === 'number' ? quote.calories : 0);
+	const totalDisplay = formatCurrency(Math.round(totalAnimated));
+	const proteinDisplay = `${Math.round(proteinAnimated)}g`;
+	const caloriesDisplay = quote?.calories == null ? '—' : `${Math.round(caloriesAnimated)} kcal`;
+	const ingredientCount = selectedDetails.length;
 
 	const Summary = (
 		<Card className="border-oz-neutral/40 bg-white/95 backdrop-blur">
 			<CardHeader className="pb-3">
-				<CardTitle className="text-oz-primary">Live Summary</CardTitle>
+				<CardTitle className="text-base font-semibold text-oz-primary md:text-lg">Live Summary</CardTitle>
 				<div className="text-xs text-muted-foreground">Totals and minimums are computed by the server.</div>
 			</CardHeader>
 			<CardContent className="space-y-4">
@@ -548,7 +573,7 @@ export default function BuildYourOwn() {
 						</div>
 						<div className="text-right">
 							<div className="text-xs text-muted-foreground">Total</div>
-							<div className="mt-1 text-lg font-bold text-oz-primary">{formatCurrency(Math.round(totalAnimated))}</div>
+							<div className="mt-1 text-2xl font-bold text-oz-primary md:text-3xl">{totalDisplay}</div>
 						</div>
 					</div>
 				</div>
@@ -558,17 +583,17 @@ export default function BuildYourOwn() {
 						<div className="flex items-center gap-1 text-[11px] text-muted-foreground">
 							<Dumbbell className="h-3.5 w-3.5" /> Protein
 						</div>
-						<div className="mt-1 font-semibold text-oz-primary">{Math.round(proteinAnimated)}g</div>
+						<div className="mt-1 font-semibold text-oz-primary">{proteinDisplay}</div>
 					</div>
 					<div className="rounded-2xl border bg-oz-neutral/10 p-3">
 						<div className="flex items-center gap-1 text-[11px] text-muted-foreground">
 							<Flame className="h-3.5 w-3.5" /> Calories
 						</div>
-						<div className="mt-1 font-semibold text-oz-primary">{quote?.calories == null ? '—' : Math.round(caloriesAnimated)}</div>
+						<div className="mt-1 font-semibold text-oz-primary">{caloriesDisplay}</div>
 					</div>
 					<div className="rounded-2xl border bg-oz-neutral/10 p-3">
 						<div className="text-[11px] text-muted-foreground">Ingredients</div>
-						<div className="mt-1 font-semibold text-oz-primary">{selectedDetails.length}</div>
+						<div className="mt-1 font-semibold text-oz-primary">{ingredientCount}</div>
 					</div>
 				</div>
 
@@ -611,21 +636,21 @@ export default function BuildYourOwn() {
 					<div className="grid grid-cols-3 gap-2">
 						<Button
 							variant={mode === 'single' ? 'default' : 'outline'}
-							className={mode === 'single' ? 'bg-oz-accent hover:bg-oz-accent/90' : ''}
+							className={`${mode === 'single' ? 'bg-oz-accent hover:bg-oz-accent/90' : ''} text-sm font-semibold`}
 							onClick={() => setMode('single')}
 						>
 							Single
 						</Button>
 						<Button
 							variant={mode === 'weekly' ? 'default' : 'outline'}
-							className={mode === 'weekly' ? 'bg-oz-accent hover:bg-oz-accent/90 relative' : 'relative'}
+							className={`${mode === 'weekly' ? 'bg-oz-accent hover:bg-oz-accent/90 relative' : 'relative'} text-sm font-semibold`}
 							onClick={() => setMode('weekly')}
 						>
 							Weekly
 						</Button>
 						<Button
 							variant={mode === 'monthly' ? 'default' : 'outline'}
-							className={mode === 'monthly' ? 'bg-oz-accent hover:bg-oz-accent/90' : ''}
+							className={`${mode === 'monthly' ? 'bg-oz-accent hover:bg-oz-accent/90' : ''} text-sm font-semibold`}
 							onClick={() => setMode('monthly')}
 						>
 							Monthly
@@ -681,7 +706,7 @@ export default function BuildYourOwn() {
 
 				<div className="relative">
 					<Button
-						className={justAdded ? 'w-full bg-green-600 hover:bg-green-600/90 transition-all' : 'w-full bg-oz-secondary hover:bg-oz-secondary/90 transition-all'}
+						className={justAdded ? 'w-full bg-green-600 hover:bg-green-600/90 text-sm font-semibold transition-all' : 'w-full bg-oz-secondary hover:bg-oz-secondary/90 text-sm font-semibold transition-all'}
 						disabled={
 							!hasSelections ||
 							quoteLoading ||
@@ -752,7 +777,7 @@ export default function BuildYourOwn() {
 	);
 
 	return (
-		<div className="animate-fade-in">
+		<div className="animate-fade-in pb-28 lg:pb-0">
 			<section 
 				className="relative bg-oz-primary text-white py-12 md:py-16 overflow-hidden"
 				style={{
@@ -772,8 +797,8 @@ export default function BuildYourOwn() {
 						Back
 					</Link>
 					<div className="max-w-3xl mx-auto text-center mt-6">
-						<h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3">Build Your Own Meal</h1>
-						<p className="text-lg text-white/90 max-w-2xl mx-auto mb-0">
+						<h1 className="text-2xl font-bold leading-tight mb-3 md:text-4xl lg:text-5xl">Build Your Own Meal</h1>
+						<p className="text-sm leading-relaxed text-white/90 max-w-2xl mx-auto md:text-lg">
 							Customize ingredients. Live protein & pricing. Add your build to cart to checkout.
 						</p>
 					</div>
@@ -788,13 +813,13 @@ export default function BuildYourOwn() {
 							<div className="text-sm text-muted-foreground mt-1">{error}</div>
 						</div>
 					) : (
-						<div className="grid grid-cols-1 xl:grid-cols-[340px_1fr_380px] gap-6">
+						<div className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_1fr_380px]">
 							{/* Left Column - Dynamic Tray */}
-							<div className="order-2 xl:order-1">
+							<div className="order-3 xl:order-1">
 								{loading ? (
 									<Card className="border-oz-neutral/40 bg-white">
 										<CardHeader className="pb-3">
-											<CardTitle className="text-oz-primary">Your Meal Tray</CardTitle>
+											<CardTitle className="text-base font-semibold text-oz-primary md:text-lg">Your Meal Tray</CardTitle>
 											<div className="text-sm text-muted-foreground">Loading preview…</div>
 										</CardHeader>
 										<CardContent>
@@ -817,7 +842,7 @@ export default function BuildYourOwn() {
 												<Sparkles className="h-5 w-5 text-white" />
 											</div>
 											<div>
-												<CardTitle className="text-oz-primary">Select Ingredients</CardTitle>
+												<CardTitle className="text-base font-semibold text-oz-primary md:text-lg">Select Ingredients</CardTitle>
 												<div className="text-xs text-muted-foreground mt-0.5">Pick quantities per serving. Summary updates instantly.</div>
 											</div>
 										</div>
@@ -841,17 +866,19 @@ export default function BuildYourOwn() {
 										) : (
 											<Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)}>
 												<div className="bg-gradient-to-r from-oz-neutral/20 via-oz-neutral/10 to-oz-neutral/20 rounded-xl p-3 mb-5">
-													<TabsList className="flex w-full flex-wrap justify-start gap-2 bg-transparent p-0">
+													<div className="overflow-x-auto whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+														<TabsList className="flex w-max gap-2 bg-transparent p-0" role="tablist">
 														{activeItemTypes.map((t) => (
 															<TabsTrigger 
 																key={t.id} 
 																value={t.id}
-																className="relative rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-600 transition-all hover:text-oz-primary hover:bg-white/60 data-[state=active]:bg-gradient-to-br data-[state=active]:from-oz-primary data-[state=active]:to-oz-primary/90 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-[1.02]"
+																className="relative rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-600 transition-all hover:text-oz-primary hover:bg-white/60 data-[state=active]:scale-[1.02] data-[state=active]:bg-gradient-to-br data-[state=active]:from-oz-primary data-[state=active]:to-oz-primary/90 data-[state=active]:text-white data-[state=active]:shadow-lg"
 															>
 																{t.name}
 															</TabsTrigger>
 														))}
-													</TabsList>
+														</TabsList>
+													</div>
 												</div>
 
 												{activeItemTypes.map((t) => (
@@ -901,22 +928,23 @@ export default function BuildYourOwn() {
 																					) : null}
 																				</div>
 
-																				<div className="p-4">
+																				<div className="px-4 py-3.5 sm:px-5 sm:py-4">
 																					<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
 																						<div className="min-w-0">
 																							<div className="font-semibold text-oz-primary truncate">{item.name}</div>
-																							<div className="mt-1 flex flex-wrap items-center gap-2">
+																							<div className="mt-2 flex flex-wrap items-center gap-3">
 																								<span className="inline-flex items-center rounded-full border border-oz-neutral/60 bg-white px-2.5 py-1 text-[11px] font-medium text-oz-primary">
 																								{formatQtyUnit(item.quantityValue, item.quantityUnit)}
 																								</span>
 																								{typeof item.proteinGrams === 'number' ? (
-																									<span className="inline-flex items-center gap-1 rounded-full bg-oz-secondary/10 text-oz-primary px-2.5 py-1 text-[11px] font-medium">
+																									<span className="inline-flex items-center gap-1 rounded-full bg-oz-secondary/10 px-3 py-1 text-xs font-medium text-oz-primary">
 																										<Dumbbell className="h-3.5 w-3.5 text-oz-secondary" /> +{item.proteinGrams}g
 																									</span>
 																								) : null}
 																								{typeof item.calories === 'number' ? (
-																									<span className="inline-flex items-center gap-1 rounded-full bg-oz-neutral/30 text-oz-primary px-2.5 py-1 text-[11px] font-medium">
-																										<Flame className="h-3.5 w-3.5 text-oz-accent" /> {item.calories} kcal
+																									<span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1 text-xs font-medium text-orange-600">
+																										<Flame className="h-3 w-3 text-orange-500" />
+																										{item.calories} kcal
 																									</span>
 																								) : null}
 																							</div>
@@ -933,29 +961,32 @@ export default function BuildYourOwn() {
 																								/>
 																							<div className="mt-2 flex flex-wrap gap-1 justify-start sm:justify-end">
 																									<Button
-																									variant="ghost"
-																									size="sm"
-																									className="h-9 px-3"
+																										variant="ghost"
+																										size="sm"
+																										className="h-11 min-h-[44px] px-3 text-sm font-semibold transition-transform active:scale-95"
 																									onClick={() => setSelections((prev) => ({ ...prev, [item.id]: Math.max(prev[item.id] || 0, 1) }))}
 																									disabled={disabled}
+																										type="button"
 																								>
 																									1×
 																								</Button>
 																									<Button
-																									variant="ghost"
-																									size="sm"
-																									className="h-9 px-3"
+																										variant="ghost"
+																										size="sm"
+																										className="h-11 min-h-[44px] px-3 text-sm font-semibold transition-transform active:scale-95"
 																									onClick={() => setSelections((prev) => ({ ...prev, [item.id]: Math.max(prev[item.id] || 0, 2) }))}
 																									disabled={disabled}
+																										type="button"
 																								>
 																									2×
 																								</Button>
 																									<Button
-																									variant="ghost"
-																									size="sm"
-																									className="h-9 px-3"
+																										variant="ghost"
+																										size="sm"
+																										className="h-11 min-h-[44px] px-3 text-sm font-semibold transition-transform active:scale-95"
 																									onClick={() => setSelections((prev) => ({ ...prev, [item.id]: Math.max(prev[item.id] || 0, 3) }))}
 																									disabled={disabled}
+																										type="button"
 																								>
 																									3×
 																								</Button>
@@ -983,8 +1014,8 @@ export default function BuildYourOwn() {
 											<Sparkles className="h-5 w-5 text-oz-secondary" />
 										</div>
 										<div>
-											<div className="font-semibold text-oz-primary">Minimum order rules</div>
-											<div className="text-sm text-muted-foreground mt-1">
+											<div className="text-base font-semibold text-oz-primary">Minimum order rules</div>
+											<div className="text-sm leading-relaxed text-muted-foreground mt-1">
 												Weekly minimum: {formatCurrency(config?.minimumWeeklyOrderAmount || 0)} · Monthly minimum: {formatCurrency(config?.minimumMonthlyOrderAmount || 0)}
 											</div>
 										</div>
@@ -993,50 +1024,65 @@ export default function BuildYourOwn() {
 							</div>
 
 							{/* Right Column - Live Summary */}
-							<div className="order-3 xl:order-3">
-								<div className="xl:sticky xl:top-24">{Summary}</div>
+						<div className="order-2 space-y-4 xl:order-3">
+							<div className="xl:hidden">
+								<Accordion type="single" collapsible defaultValue="summary" className="w-full">
+									<AccordionItem value="summary" className="border-none">
+										<AccordionTrigger className="rounded-2xl border border-oz-neutral/40 bg-white px-4 py-3 text-left font-semibold text-oz-primary no-underline">
+											<div className="flex w-full items-center justify-between gap-4">
+												<div>
+													<div className="text-xs text-muted-foreground">Live summary</div>
+													<div className="text-2xl font-bold text-oz-primary md:text-3xl">{totalDisplay}</div>
+													<div className="text-xs text-muted-foreground">
+														{proteinDisplay} protein • {caloriesDisplay} • {ingredientCount} ingredients
+													</div>
+												</div>
+												<span className="text-xs font-medium text-oz-primary/70">Tap to expand</span>
+											</div>
+										</AccordionTrigger>
+										<AccordionContent className="pt-4">
+											{Summary}
+										</AccordionContent>
+									</AccordionItem>
+								</Accordion>
+							</div>
+							<div className="hidden xl:block xl:sticky xl:top-24">{Summary}</div>
 							</div>
 						</div>
 					)}
 				</div>
 			</section>
 
-			<div className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t bg-white/95 backdrop-blur p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-				<div className="container mx-auto px-4 flex items-center justify-between gap-3">
-					<div className="min-w-0">
-						<div className="text-xs text-muted-foreground">Build-your-own</div>
-						<div className="font-semibold text-oz-primary truncate">
-							{formatCurrency(quote?.total || 0)} · {quote?.proteinGrams || 0}g protein
-						</div>
-						{(mode === 'weekly' || mode === 'monthly') && quote ? (
-							<div className={quote.meetsMinimum ? 'mt-1 text-xs text-green-700' : 'mt-1 text-xs text-amber-700'}>
-								{quote.meetsMinimum ? 'Minimum met' : `${formatCurrency(getRemainingToMinimum(quote))} to minimum`}
-							</div>
-						) : null}
-					</div>
-					<Drawer>
-						<DrawerTrigger asChild>
-							<Button variant="outline" className="h-11">View summary</Button>
-						</DrawerTrigger>
-						<DrawerContent>
-							<DrawerHeader>
-								<div className="flex items-center justify-between gap-3">
-									<DrawerTitle>Summary</DrawerTitle>
-									<DrawerClose asChild>
-										<Button variant="ghost" className="h-9 px-3">Back to ingredients</Button>
-									</DrawerClose>
-								</div>
-							</DrawerHeader>
-							<div className="p-4 max-h-[75vh] overflow-auto">{Summary}</div>
-							<DrawerFooter>
-								<DrawerClose asChild>
-									<Button variant="outline" className="h-11">Back to ingredients</Button>
-								</DrawerClose>
-							</DrawerFooter>
-						</DrawerContent>
-					</Drawer>
+		<div className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t bg-white/90 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-lg backdrop-blur-md">
+			<div className="flex items-center justify-between gap-4">
+				<div className="min-w-0">
+					<div className="text-xs text-muted-foreground">Total</div>
+					<div className="text-2xl font-bold text-oz-primary md:text-3xl">{totalDisplay}</div>
+					<div className="text-xs text-muted-foreground">{proteinDisplay} protein</div>
 				</div>
+				<Drawer>
+					<DrawerTrigger asChild>
+						<Button type="button" className="h-11 px-6 text-sm font-semibold">View Summary</Button>
+					</DrawerTrigger>
+					<DrawerContent>
+						<DrawerHeader>
+							<div className="flex items-center justify-between gap-3">
+								<DrawerTitle>Summary</DrawerTitle>
+								<DrawerClose asChild>
+									<Button type="button" variant="ghost" className="h-9 px-3 text-sm font-semibold">Back to ingredients</Button>
+								</DrawerClose>
+							</div>
+						</DrawerHeader>
+						<div className="max-h-[75vh] overflow-auto p-4">{Summary}</div>
+						<DrawerFooter>
+							<DrawerClose asChild>
+								<Button type="button" variant="outline" className="h-11 text-sm font-semibold">Back to ingredients</Button>
+							</DrawerClose>
+						</DrawerFooter>
+					</DrawerContent>
+				</Drawer>
 			</div>
+		</div>
 		</div>
 	);
 }

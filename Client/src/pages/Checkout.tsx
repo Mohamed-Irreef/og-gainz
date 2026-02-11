@@ -577,13 +577,13 @@ export default function Checkout() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-oz-primary mb-8">Checkout</h1>
+        <h1 className="text-xl font-bold text-oz-primary mb-6 leading-tight md:text-3xl">Checkout</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold text-oz-primary md:text-xl">
                   <MapPin className="h-5 w-5 text-oz-secondary" />
                   Delivery Address
                 </CardTitle>
@@ -640,7 +640,7 @@ export default function Checkout() {
                               variant="outline"
                               size="sm"
                               onClick={() => openEditAddress(address)}
-                              className="rounded-xl"
+                              className="rounded-xl text-sm font-semibold"
                             >
                               <Pencil className="h-4 w-4 mr-1" />
                               Edit
@@ -650,7 +650,7 @@ export default function Checkout() {
                               variant="outline"
                               size="sm"
                               onClick={() => void handleDeleteAddress(address.id)}
-                              className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/5"
+                              className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/5 text-sm font-semibold"
                             >
                               <Trash2 className="h-4 w-4 mr-1" />
                               Delete
@@ -660,7 +660,7 @@ export default function Checkout() {
                       ))}
                     </RadioGroup>
 
-                    <Button variant="outline" onClick={openCreateAddress} className="w-full rounded-2xl">
+                    <Button variant="outline" onClick={openCreateAddress} className="w-full rounded-2xl text-sm font-semibold">
                       + Add New Address
                     </Button>
                   </div>
@@ -905,7 +905,7 @@ export default function Checkout() {
                         </div>
 
                         <div className="space-y-4">
-                          <Button type="button" variant="outline" onClick={handleGetCurrentLocation} className="w-full">
+                          <Button type="button" variant="outline" onClick={handleGetCurrentLocation} className="w-full text-sm font-semibold">
                             <LocateFixed className="mr-2 h-4 w-4" />
                             Get Current Location
                           </Button>
@@ -944,6 +944,7 @@ export default function Checkout() {
                           <Button
                             type="button"
                             variant="outline"
+                            className="text-sm font-semibold"
                             onClick={() => {
                               setShowAddressForm(false);
                               setEditingAddressId(null);
@@ -953,7 +954,7 @@ export default function Checkout() {
                             Cancel
                           </Button>
                         ) : null}
-                        <Button type="submit" className="bg-oz-secondary hover:bg-oz-secondary/90">
+                        <Button type="submit" className="bg-oz-secondary hover:bg-oz-secondary/90 text-sm font-semibold">
                           Save Address
                         </Button>
                       </div>
@@ -965,7 +966,7 @@ export default function Checkout() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold text-oz-primary md:text-xl">
                   <CreditCard className="h-5 w-5 text-oz-secondary" />
                   Payment
                 </CardTitle>
@@ -980,7 +981,7 @@ export default function Checkout() {
             <div className="sticky top-24">
               <Card className="border-oz-secondary">
                 <CardHeader className="bg-oz-secondary/5">
-                  <CardTitle className="text-oz-primary">Order Summary</CardTitle>
+                  <CardTitle className="text-base font-semibold text-oz-primary md:text-xl">Order Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4">
                   {quoteError ? (
@@ -1018,7 +1019,7 @@ export default function Checkout() {
                       </div>
                     ) : null}
                     <Separator />
-                    <div className="flex justify-between font-semibold text-lg">
+                    <div className="flex justify-between font-semibold text-base md:text-lg">
                       <span className="text-oz-primary">Total</span>
                       <span>{formatCurrency(quote?.total || 0)}</span>
                     </div>
@@ -1027,7 +1028,7 @@ export default function Checkout() {
                   <Button
                     onClick={handlePay}
                     disabled={!canPay || isProcessing}
-                    className="w-full mt-6 bg-oz-accent hover:bg-oz-accent/90 h-12 text-lg"
+                    className="w-full mt-6 bg-oz-accent hover:bg-oz-accent/90 h-12 text-sm font-semibold md:text-base"
                   >
                     {isProcessing ? (
                       <>
