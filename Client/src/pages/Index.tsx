@@ -621,53 +621,57 @@ const FeaturedMealCard = ({ meal }: { meal: Meal }) => {
   const startingPrice = getMinimumWeeklyPrice();
 
   return (
-    <Link to={`/meal-packs/${meal.slug || meal.id}`} className="group block">
-      <Card className="h-full border-2 border-oz-primary/10 bg-white shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-oz-accent overflow-hidden">
+    <Link to={`/meal-packs/${meal.slug || meal.id}`} className="group block h-full">
+      <Card className="h-full border-2 border-oz-primary/10 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:border-oz-accent/30 overflow-hidden">
         <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-oz-primary/5 to-oz-accent/5">
           <img 
             src={imageUrl} 
             alt={meal.name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
             onError={(e) => {
               e.currentTarget.src = '/placeholder-meal.png';
             }}
           />
           {meal.isFeatured && (
-            <div className="absolute top-3 right-3">
-              <Badge className="bg-oz-accent text-white font-semibold shadow-lg">
+            <div className="absolute top-4 right-4">
+              <Badge className="bg-gradient-to-r from-oz-accent to-oz-accent/90 text-white font-semibold shadow-md px-3 py-1 rounded-full">
                 <Star className="h-3 w-3 mr-1 fill-current" />
                 Featured
               </Badge>
             </div>
           )}
         </div>
-        <CardContent className="p-5">
-          <h3 className="text-lg font-bold text-oz-primary mb-2 group-hover:text-oz-accent transition-colors">
+        <CardContent className="p-6">
+          <h3 className="text-xl font-bold text-oz-primary mb-2 group-hover:text-oz-accent transition-colors">
             {meal.name}
           </h3>
-          <p className="text-xs text-oz-primary/60 mb-4 line-clamp-2">
+          <p className="text-sm text-oz-primary/60 mb-4 line-clamp-2 leading-relaxed">
             {meal.shortDescription || meal.description}
           </p>
           
-          <div className="space-y-2 mb-4">
-            <div className="flex items-center gap-2 text-sm">
-              <div className="flex items-center gap-1 text-oz-accent font-semibold">
+          <div className="space-y-2 mb-5">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oz-accent/10 text-oz-accent font-bold">
                 <Dumbbell className="h-4 w-4" />
                 <span>{meal.proteinPerMeal}g</span>
               </div>
               <span className="text-oz-primary/40">•</span>
-              <span className="text-oz-primary/70 text-xs">{meal.caloriesRange}</span>
+              <span className="text-oz-primary/60 text-sm">{meal.caloriesRange}</span>
             </div>
           </div>
           
-          <div className="pt-3 border-t border-oz-primary/10">
+          <div className="pt-4 border-t border-oz-primary/10">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-oz-primary/50">Starting from</p>
-                <p className="text-xl font-bold text-oz-primary">₹{startingPrice}</p>
-                <p className="text-xs text-oz-primary/50">Weekly • 5 Servings</p>
+                <p className="text-xs text-oz-primary/50 mb-1">Starting from</p>
+                <p className="text-2xl font-bold text-oz-primary bg-gradient-to-r from-oz-primary to-oz-accent bg-clip-text text-transparent">
+                  ₹{startingPrice}
+                </p>
+                <p className="text-xs text-oz-primary/50 mt-0.5">Weekly • 5 Servings</p>
               </div>
-              <ArrowRight className="h-5 w-5 text-oz-accent group-hover:translate-x-1 transition-transform" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-oz-accent/10 group-hover:bg-oz-accent group-hover:text-white transition-all">
+                <ArrowRight className="h-5 w-5 text-oz-accent group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+              </div>
             </div>
           </div>
         </CardContent>
@@ -722,9 +726,12 @@ const Index = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [heroBannerIndex, setHeroBannerIndex] = useState(0);
   const [whyCarouselApi, setWhyCarouselApi] = useState<any>(null);
+  const [featuredCarouselApi, setFeaturedCarouselApi] = useState<any>(null);
   const [featuredMeals, setFeaturedMeals] = useState<Meal[]>([]);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
   const [showStickyCTA, setShowStickyCTA] = useState(false);
+  const [isCarouselHovered, setIsCarouselHovered] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const heroBanners = useMemo<string[]>(() => {
     return isMobile ? [...mobileOnlyHeroBanners] : [...desktopHeroBanners];
@@ -772,6 +779,33 @@ const Index = () => {
 
     return () => clearInterval(intervalId);
   }, [whyCarouselApi, isMobile]);
+
+  // Auto-slide for Featured Meal Plans carousel (all screen sizes)
+  useEffect(() => {
+    if (!featuredCarouselApi || isCarouselHovered) return;
+
+    const intervalId = setInterval(() => {
+      featuredCarouselApi.scrollNext();
+    }, 4000); // Auto-slide every 4 seconds
+
+    return () => clearInterval(intervalId);
+  }, [featuredCarouselApi, isCarouselHovered]);
+
+  // Track current slide for pagination dots
+  useEffect(() => {
+    if (!featuredCarouselApi) return;
+
+    const onSelect = () => {
+      setCurrentSlide(featuredCarouselApi.selectedScrollSnap());
+    };
+
+    featuredCarouselApi.on('select', onSelect);
+    onSelect(); // Set initial slide
+
+    return () => {
+      featuredCarouselApi.off('select', onSelect);
+    };
+  }, [featuredCarouselApi]);
 
   // Fetch featured meals
   useEffect(() => {
@@ -1133,33 +1167,66 @@ const Index = () => {
             </div>
           ) : featuredMeals.length > 0 ? (
             <>
-              {/* Mobile: swipe */}
-              <div className="md:hidden">
-                <Carousel opts={{ align: "start", loop: true }} className="w-full">
+              {/* Auto-sliding carousel for all screen sizes */}
+              <div 
+                className="relative"
+                onMouseEnter={() => setIsCarouselHovered(true)}
+                onMouseLeave={() => setIsCarouselHovered(false)}
+              >
+                <Carousel
+                  opts={{ 
+                    align: "start", 
+                    loop: true,
+                    skipSnaps: false,
+                  }}
+                  setApi={setFeaturedCarouselApi}
+                  className="w-full"
+                >
                   <CarouselContent className="-ml-4">
                     {featuredMeals.map((meal) => (
-                      <CarouselItem key={meal.id} className="pl-4 basis-[90%]">
+                      <CarouselItem 
+                        key={meal.id} 
+                        className="pl-4 basis-full md:basis-1/2 lg:basis-1/3"
+                      >
                         <FeaturedMealCard meal={meal} />
                       </CarouselItem>
                     ))}
                   </CarouselContent>
-                  <div className="mt-8 flex items-center justify-center gap-4">
-                    <CarouselPrevious className="static h-10 w-10 border-2 border-oz-primary/20 hover:border-oz-accent" />
-                    <CarouselNext className="static h-10 w-10 border-2 border-oz-primary/20 hover:border-oz-accent" />
+                  
+                  {/* Navigation arrows - modern circular buttons */}
+                  <div className="mt-8 flex items-center justify-center gap-3">
+                    <CarouselPrevious 
+                      className="static h-12 w-12 rounded-full border-2 border-oz-primary/20 bg-white hover:bg-oz-accent hover:text-white hover:border-oz-accent transition-all duration-300 shadow-md hover:shadow-lg"
+                      aria-label="Previous meal plan"
+                    />
+                    
+                    {/* Pagination dots */}
+                    <div className="flex gap-2">
+                      {featuredMeals.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => featuredCarouselApi?.scrollTo(index)}
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            currentSlide === index
+                              ? 'w-8 bg-oz-accent'
+                              : 'w-2 bg-oz-primary/30 hover:bg-oz-primary/50'
+                          }`}
+                          aria-label={`Go to slide ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                    
+                    <CarouselNext 
+                      className="static h-12 w-12 rounded-full border-2 border-oz-primary/20 bg-white hover:bg-oz-accent hover:text-white hover:border-oz-accent transition-all duration-300 shadow-md hover:shadow-lg"
+                      aria-label="Next meal plan"
+                    />
                   </div>
                 </Carousel>
-              </div>
-
-              {/* Desktop: grid */}
-              <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-6">
-                {featuredMeals.map((meal) => (
-                  <FeaturedMealCard key={meal.id} meal={meal} />
-                ))}
               </div>
               
               <div className="mt-12 text-center">
                 <Link to="/meal-packs">
-                  <Button size="lg" className="bg-oz-accent hover:bg-oz-accent/90 text-white font-semibold px-8 py-6 text-base shadow-lg hover:shadow-xl transition-all hover:scale-105">
+                  <Button size="lg" className="bg-oz-accent hover:bg-oz-accent/90 text-white font-semibold px-8 py-6 text-base rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105">
                     Explore All Meal Plans
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
