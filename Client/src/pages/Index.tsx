@@ -202,7 +202,7 @@ function TestimonialCarousel({ testimonials }: { testimonials: Testimonial[] }) 
 
   const slideVariants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? 1000 : -1000,
+      x: direction > 0 ? 300 : -300,
       opacity: 0,
       scale: 0.9,
     }),
@@ -214,7 +214,7 @@ function TestimonialCarousel({ testimonials }: { testimonials: Testimonial[] }) 
     },
     exit: (direction: number) => ({
       zIndex: 0,
-      x: direction < 0 ? 1000 : -1000,
+      x: direction < 0 ? 300 : -300,
       opacity: 0,
       scale: 0.9,
     }),
@@ -224,7 +224,7 @@ function TestimonialCarousel({ testimonials }: { testimonials: Testimonial[] }) 
     <div className="mx-auto mt-12 max-w-5xl">
       <div className="relative overflow-hidden px-4">
         {/* Testimonial Cards */}
-        <div className="relative h-[280px] md:h-[240px]">
+        <div className="relative min-h-[280px] md:h-[240px]">
           <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
               key={currentIndex}
@@ -241,61 +241,110 @@ function TestimonialCarousel({ testimonials }: { testimonials: Testimonial[] }) 
               className="absolute inset-0"
             >
               <div className="grid h-full gap-6 md:grid-cols-2">
-                {[
-                  testimonials[currentIndex],
-                  testimonials[(currentIndex + 1) % testimonials.length],
-                ].map((testimonial, idx) => (
-                  <motion.div
-                    key={`${currentIndex}-${idx}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.1, duration: 0.5 }}
-                  >
-                    <Card className="group relative h-full overflow-hidden border-2 border-oz-primary/30 bg-gradient-to-br from-white via-oz-neutral/5 to-oz-primary/5 shadow-lg transition-all duration-500 hover:scale-[1.02] hover:border-oz-primary/50 hover:shadow-xl">
-                      {/* Decorative quote icon */}
-                      <div className="absolute right-4 top-4 opacity-5 transition-opacity duration-300 group-hover:opacity-10">
-                        <Quote className="h-20 w-20 text-oz-primary" />
+                {/* First card - always visible */}
+                <motion.div
+                  key={`${currentIndex}-0`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0, duration: 0.5 }}
+                >
+                  <Card className="group relative h-full overflow-hidden border-2 border-oz-primary/30 bg-gradient-to-br from-white via-oz-neutral/5 to-oz-primary/5 shadow-lg transition-all duration-500 hover:scale-[1.02] hover:border-oz-primary/50 hover:shadow-xl">
+                    {/* Decorative quote icon */}
+                    <div className="absolute right-4 top-4 opacity-5 transition-opacity duration-300 group-hover:opacity-10">
+                      <Quote className="h-20 w-20 text-oz-primary" />
+                    </div>
+                    
+                    {/* Glow effect */}
+                    <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-oz-accent/5 blur-2xl transition-all duration-500 group-hover:bg-oz-accent/10" />
+                    
+                    <CardHeader className="relative space-y-2 pb-3">
+                      <div className="flex items-center justify-between">
+                        <motion.div
+                          whileHover={{ scale: 1.05 }}
+                          className="inline-flex"
+                        >
+                          <Stars rating={testimonials[currentIndex].rating} />
+                        </motion.div>
                       </div>
                       
-                      {/* Glow effect */}
-                      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-oz-accent/5 blur-2xl transition-all duration-500 group-hover:bg-oz-accent/10" />
-                      
-                      <CardHeader className="relative space-y-2 pb-3">
-                        <div className="flex items-center justify-between">
-                          <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            className="inline-flex"
-                          >
-                            <Stars rating={testimonial.rating} />
-                          </motion.div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-oz-primary text-lg font-bold text-white shadow-md ring-2 ring-oz-primary/20 transition-transform duration-300 group-hover:scale-110">
+                          {testimonials[currentIndex].name[0]}
                         </div>
-                        
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-oz-primary text-lg font-bold text-white shadow-md ring-2 ring-oz-primary/20 transition-transform duration-300 group-hover:scale-110">
-                            {testimonial.name[0]}
-                          </div>
-                          <div className="min-w-0">
-                            <CardTitle className="text-lg font-bold text-oz-primary">
-                              {testimonial.name}
-                            </CardTitle>
-                            <CardDescription className="text-xs font-medium text-muted-foreground">
-                              {testimonial.role}
-                            </CardDescription>
-                          </div>
+                        <div className="min-w-0">
+                          <CardTitle className="text-lg font-bold text-oz-primary">
+                            {testimonials[currentIndex].name}
+                          </CardTitle>
+                          <CardDescription className="text-xs font-medium text-muted-foreground">
+                            {testimonials[currentIndex].role}
+                          </CardDescription>
                         </div>
-                      </CardHeader>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="relative pb-5 pt-1">
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        "{testimonials[currentIndex].quote}"
+                      </p>
                       
-                      <CardContent className="relative pb-5 pt-1">
-                        <p className="text-sm leading-relaxed text-muted-foreground">
-                          "{testimonial.quote}"
-                        </p>
-                        
-                        {/* Bottom accent line */}
-                        <div className="mt-4 h-1 w-12 rounded-full bg-gradient-to-r from-oz-accent to-oz-primary transition-all duration-300 group-hover:w-20" />
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
+                      {/* Bottom accent line */}
+                      <div className="mt-4 h-1 w-12 rounded-full bg-gradient-to-r from-oz-accent to-oz-primary transition-all duration-300 group-hover:w-20" />
+                    </CardContent>
+                  </Card>
+                </motion.div>
+                
+                {/* Second card - hidden on mobile, visible on desktop */}
+                <motion.div
+                  key={`${currentIndex}-1`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1, duration: 0.5 }}
+                  className="hidden md:block"
+                >
+                  <Card className="group relative h-full overflow-hidden border-2 border-oz-primary/30 bg-gradient-to-br from-white via-oz-neutral/5 to-oz-primary/5 shadow-lg transition-all duration-500 hover:scale-[1.02] hover:border-oz-primary/50 hover:shadow-xl">
+                    {/* Decorative quote icon */}
+                    <div className="absolute right-4 top-4 opacity-5 transition-opacity duration-300 group-hover:opacity-10">
+                      <Quote className="h-20 w-20 text-oz-primary" />
+                    </div>
+                    
+                    {/* Glow effect */}
+                    <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-oz-accent/5 blur-2xl transition-all duration-500 group-hover:bg-oz-accent/10" />
+                    
+                    <CardHeader className="relative space-y-2 pb-3">
+                      <div className="flex items-center justify-between">
+                        <motion.div
+                          whileHover={{ scale: 1.05 }}
+                          className="inline-flex"
+                        >
+                          <Stars rating={testimonials[(currentIndex + 1) % testimonials.length].rating} />
+                        </motion.div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-oz-primary text-lg font-bold text-white shadow-md ring-2 ring-oz-primary/20 transition-transform duration-300 group-hover:scale-110">
+                          {testimonials[(currentIndex + 1) % testimonials.length].name[0]}
+                        </div>
+                        <div className="min-w-0">
+                          <CardTitle className="text-lg font-bold text-oz-primary">
+                            {testimonials[(currentIndex + 1) % testimonials.length].name}
+                          </CardTitle>
+                          <CardDescription className="text-xs font-medium text-muted-foreground">
+                            {testimonials[(currentIndex + 1) % testimonials.length].role}
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="relative pb-5 pt-1">
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        "{testimonials[(currentIndex + 1) % testimonials.length].quote}"
+                      </p>
+                      
+                      {/* Bottom accent line */}
+                      <div className="mt-4 h-1 w-12 rounded-full bg-gradient-to-r from-oz-accent to-oz-primary transition-all duration-300 group-hover:w-20" />
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </div>
             </motion.div>
           </AnimatePresence>
