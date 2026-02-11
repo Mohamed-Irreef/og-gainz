@@ -1205,6 +1205,7 @@ const Index = () => {
                       {featuredMeals.map((_, index) => (
                         <button
                           key={index}
+                          type="button"
                           onClick={() => featuredCarouselApi?.scrollTo(index)}
                           className={`h-2 rounded-full transition-all duration-300 ${
                             currentSlide === index
