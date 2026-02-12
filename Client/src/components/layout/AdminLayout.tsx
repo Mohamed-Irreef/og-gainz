@@ -83,7 +83,6 @@ export function AdminLayout() {
       { path: '/admin/byo-config', title: 'BYO Minimums', description: 'Admin-configurable minimum order amounts for subscriptions.' },
       { path: '/admin/addon-categories', title: 'Add-on Categories', description: 'Organize add-ons into categories for a clean storefront experience.' },
       { path: '/admin/addons', title: 'Add-ons', description: 'Create, edit, and manage add-ons available for purchase or subscription.' },
-      { path: '/admin/orders', title: 'Orders', description: 'Review paid orders, confirm/decline, then move to kitchen.' },
       { path: '/admin/subscriptions', title: 'Subscriptions', description: 'Weekly/Monthly operational view. Pause/resume is admin-only.' },
       { path: '/admin/kitchen', title: 'Kitchen', description: 'Execute daily deliveries: cooking → packed → out for delivery → delivered.' },
       { path: '/admin/wallet', title: 'Wallet & Credits', description: 'Review and manage wallet balances and credits.' },

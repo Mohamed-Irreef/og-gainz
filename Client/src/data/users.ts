@@ -5,7 +5,7 @@ export const users: User[] = [
     id: 'user-001',
     email: 'john.doe@example.com',
     name: 'John Doe',
-    phone: '+91 98765 43210',
+    phone: '+91 93617 98644',
     avatar: undefined,
     addresses: [
       {

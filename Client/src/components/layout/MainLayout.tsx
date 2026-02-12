@@ -13,6 +13,7 @@ import {
 import { useCart } from "@/context/CartContext";
 import { useUser } from "@/context/UserContext";
 import { cn } from "@/lib/utils";
+import { businessContact } from "@/config/contact";
 
 const navLinks = [
   { href: "/meal-packs", label: "Meal Packs" },
@@ -252,10 +253,38 @@ export function MainLayout() {
             <div>
               <h4 className="font-semibold mb-4">Contact</h4>
               <ul className="space-y-2 text-sm text-white/70">
-                <li>support@oggainz.com</li>
-                <li>+91 98765 43210</li>
-                <li>Hyderabad, India</li>
+                <li>
+                  <a
+                    href={businessContact.emailHref}
+                    className="hover:text-white transition-colors underline decoration-white/40"
+                  >
+                    {businessContact.email}
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href={businessContact.phoneHref}
+                    className="hover:text-white transition-colors"
+                  >
+                    {businessContact.phone}
+                  </a>
+                </li>
+                <li>
+                  <address className="not-italic whitespace-pre-line leading-relaxed">
+                    {businessContact.addressLines.join('\n')}
+                  </address>
+                </li>
               </ul>
+              <Button
+                asChild
+                size="sm"
+                variant="secondary"
+                className="mt-4 text-oz-primary"
+              >
+                <a href={businessContact.googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                  {businessContact.googleMapsLabel}
+                </a>
+              </Button>
             </div>
           </div>
 

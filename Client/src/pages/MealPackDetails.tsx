@@ -13,6 +13,53 @@ import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Meal } from '@/types/catalog';
 
+const NO_SPACE_UNITS = new Set(['g', 'kg', 'mg', 'ml', 'l', 'oz']);
+const UNIT_SINGULAR_OVERRIDES: Record<string, string> = {
+	pieces: 'piece',
+	pcs: 'pc',
+};
+
+const sanitizeToAscii = (value?: string | number | null) => {
+	if (value === undefined || value === null) return '';
+	let safeValue = String(value);
+	const replacements: Array<[RegExp, string]> = [
+		[/ΓÇö/g, '-'],
+		[/ΓÇô/g, '-'],
+		[/[\u2010-\u2015\u2212]/g, '-'],
+		[/ΓÇ£|ΓÇ¥/g, '"'],
+		[/ΓÇª/g, '...'],
+		[/ΓÇ¢/g, '*'],
+		[/ΓÇÿ|ΓÇÖ/g, "'"],
+	];
+
+	for (const [pattern, replacement] of replacements) {
+		safeValue = safeValue.replace(pattern, replacement);
+	}
+
+	return safeValue.replace(/\s+/g, ' ').trim();
+};
+
+const buildQuantityAndUnit = (quantity?: string | number | null, unit?: string | null) => {
+	const quantityPart = sanitizeToAscii(quantity);
+	const unitPart = sanitizeToAscii(unit);
+	if (!quantityPart && !unitPart) return '';
+	if (quantityPart && unitPart) {
+		const unitLower = unitPart.toLowerCase();
+		const normalizedUnit = quantityPart === '1' && UNIT_SINGULAR_OVERRIDES[unitLower]
+			? UNIT_SINGULAR_OVERRIDES[unitLower]
+			: unitPart;
+		const joinWithoutSpace = normalizedUnit.length <= 2 || NO_SPACE_UNITS.has(normalizedUnit.toLowerCase());
+		return `${quantityPart}${joinWithoutSpace ? '' : ' '}${normalizedUnit}`;
+	}
+	return quantityPart || unitPart;
+};
+
+const formatIncludedLabel = (name?: string | null, quantity?: string | number | null, unit?: string | null) => {
+	const normalizedName = sanitizeToAscii(name) || 'Item';
+	const quantityLabel = buildQuantityAndUnit(quantity, unit);
+	return quantityLabel ? `${normalizedName} - ${quantityLabel}` : normalizedName;
+};
+
 const MealPackDetails = () => {
 	const navigate = useNavigate();
 	const { toast } = useToast();
@@ -81,7 +128,9 @@ const MealPackDetails = () => {
 			{ key: 'boiledLegumesSprouts', label: 'Boiled Legumes / Sprouts' },
 			{ key: 'nutsDryFruits', label: 'Nuts & Dry Fruits' },
 		];
-		return map.filter((m) => Boolean(items[m.key])).map((m) => ({ key: String(m.key), label: m.label }));
+		return map
+			.filter((m) => Boolean(items[m.key]))
+			.map((m) => ({ key: String(m.key), label: formatIncludedLabel(m.label) }));
 	}, [meal]);
 
 	const proteinMode = meal?.proteinPricingMode || 'default';
@@ -330,7 +379,7 @@ const MealPackDetails = () => {
 										<Zap className="h-4 w-4 text-white" />
 									</div>
 									<div className="text-lg font-semibold text-oz-primary md:text-xl">
-										{isLoading ? 'ΓÇö' : `${effectiveProteinPerMeal ?? meal?.proteinPerMeal ?? 0}g`}
+										{isLoading ? '-' : `${effectiveProteinPerMeal ?? meal?.proteinPerMeal ?? 0}g`}
 									</div>
 								</div>
 							</div>
@@ -341,7 +390,7 @@ const MealPackDetails = () => {
 										<Leaf className="h-4 w-4 text-white" />
 									</div>
 									<div className="text-lg font-semibold text-oz-primary md:text-xl">
-										{isLoading ? 'ΓÇö' : meal?.caloriesRange || 'Balanced'}
+										{isLoading ? '-' : meal?.caloriesRange || 'Balanced'}
 									</div>
 								</div>
 							</div>
@@ -352,7 +401,7 @@ const MealPackDetails = () => {
 										<BadgeCheck className="h-4 w-4 text-white" />
 									</div>
 									<div className="text-lg font-semibold text-oz-primary md:text-xl">
-										{isLoading ? 'ΓÇö' : meal?.servings}
+										{isLoading ? '-' : meal?.servings}
 									</div>
 								</div>
 							</div>
@@ -370,7 +419,7 @@ const MealPackDetails = () => {
 											{(dynamicIncluded.length > 0
 												? dynamicIncluded.map((a, idx) => ({
 													key: `${a.itemId}-${idx}`,
-													label: `${a.item?.name ?? 'Item'}${a.quantity ? ` ΓÇö ${a.quantity}${a.unit}` : ''}`,
+													label: formatIncludedLabel(a.item?.name, a.quantity, a.unit),
 												}))
 												: included
 											).map((it) => (
@@ -456,22 +505,22 @@ const MealPackDetails = () => {
 											<TabsContent value="weekly" className="pt-4 space-y-2">
 												<div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Starting at</div>
 												<div className="text-2xl font-bold text-oz-primary md:text-3xl">
-													{pricingUnavailable ? 'ΓÇö' : formatCurrency(effectivePricing?.weekly?.price || 0)}
+													{pricingUnavailable ? '-' : formatCurrency(effectivePricing?.weekly?.price || 0)}
 													<span className="text-sm font-normal text-muted-foreground"> / week</span>
 												</div>
 												<div className="text-xs text-muted-foreground">
-													{pricingUnavailable ? 'ΓÇö' : (effectivePricing?.weekly?.servings || 0)} servings
+													{pricingUnavailable ? '-' : (effectivePricing?.weekly?.servings || 0)} servings
 												</div>
 											</TabsContent>
 
 											<TabsContent value="monthly" className="pt-4 space-y-2">
 												<div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Starting at</div>
 												<div className="text-2xl font-bold text-oz-primary md:text-3xl">
-													{pricingUnavailable ? 'ΓÇö' : formatCurrency(effectivePricing?.monthly?.price || 0)}
+													{pricingUnavailable ? '-' : formatCurrency(effectivePricing?.monthly?.price || 0)}
 													<span className="text-sm font-normal text-muted-foreground"> / month</span>
 												</div>
 												<div className="text-xs text-muted-foreground">
-													{pricingUnavailable ? 'ΓÇö' : (effectivePricing?.monthly?.servings || 0)} servings
+													{pricingUnavailable ? '-' : (effectivePricing?.monthly?.servings || 0)} servings
 												</div>
 											</TabsContent>
 
@@ -482,7 +531,7 @@ const MealPackDetails = () => {
 													</div>
 												</div>
 												<div className="text-2xl font-bold text-oz-primary md:text-3xl">
-													{pricingUnavailable ? 'ΓÇö' : formatCurrency(effectivePricing?.trial?.price || 0)}
+													{pricingUnavailable ? '-' : formatCurrency(effectivePricing?.trial?.price || 0)}
 												</div>
 												<div className="text-xs text-muted-foreground">1 serving</div>
 											</TabsContent>

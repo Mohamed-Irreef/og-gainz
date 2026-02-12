@@ -12,6 +12,7 @@ import { cartCheckoutService } from '@/services/cartCheckoutService';
 import { ordersService } from '@/services/ordersService';
 import type { PublicOrder } from '@/types/ordersPhase5b';
 import { normalizeOrderFlags } from '@/types/ordersPhase5b';
+import { businessContact } from '@/config/contact';
 
 declare global {
 	interface Window {
@@ -261,6 +262,39 @@ export default function OrderSuccess() {
 							</div>
 						</div>
 					)}
+				</CardContent>
+			</Card>
+
+			<Card className="mt-6 bg-oz-neutral/30 border-oz-neutral/60">
+				<CardHeader>
+					<CardTitle className="text-base">Need quick assistance?</CardTitle>
+				</CardHeader>
+				<CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+					<div className="text-sm text-muted-foreground space-y-2">
+						<p>Our support team can help you with payment confirmations immediately.</p>
+						<a href={businessContact.phoneHref} className="font-semibold text-oz-primary hover:underline block">
+							{businessContact.phone}
+						</a>
+						<a href={businessContact.emailHref} className="font-semibold text-oz-primary hover:underline block">
+							{businessContact.email}
+						</a>
+						<address className="not-italic whitespace-pre-line">
+							{businessContact.addressLines.join('\n')}
+						</address>
+					</div>
+					<div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+						<Button asChild className="flex-1">
+							<a href={businessContact.phoneHref}>Call Support</a>
+						</Button>
+						<Button asChild variant="outline" className="flex-1">
+							<a href={businessContact.emailHref}>Email Support</a>
+						</Button>
+						<Button asChild variant="secondary" className="flex-1">
+							<a href={businessContact.googleMapsUrl} target="_blank" rel="noopener noreferrer">
+								{businessContact.googleMapsLabel}
+							</a>
+						</Button>
+					</div>
 				</CardContent>
 			</Card>
 		</div>

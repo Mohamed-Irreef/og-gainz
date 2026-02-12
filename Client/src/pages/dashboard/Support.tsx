@@ -24,6 +24,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useUser } from "@/context/UserContext";
+import { businessContact } from "@/config/contact";
 
 const faqs = [
   {
@@ -107,7 +108,7 @@ const Support = () => {
     const message = encodeURIComponent(
       `Hi OG GAINZ! I need help with my account.\n\nName: ${user?.name || 'User'}\nEmail: ${user?.email || 'N/A'}`
     );
-    window.open(`https://wa.me/919876543210?text=${message}`, '_blank');
+    window.open(`https://wa.me/${businessContact.phoneDigits}?text=${message}`, '_blank');
   };
 
   return (
@@ -156,7 +157,12 @@ const Support = () => {
               <Phone className="h-6 w-6 text-blue-600" />
             </div>
             <h4 className="font-medium mb-1">Call Us</h4>
-            <p className="text-sm text-muted-foreground mb-3">+91 98765 43210</p>
+            <a
+              href={businessContact.phoneHref}
+              className="text-sm font-semibold text-oz-primary hover:underline block mb-3"
+            >
+              {businessContact.phone}
+            </a>
             <Badge variant="outline" className="text-xs">
               9 AM - 9 PM
             </Badge>
@@ -169,13 +175,43 @@ const Support = () => {
               <Mail className="h-6 w-6 text-oz-accent" />
             </div>
             <h4 className="font-medium mb-1">Email</h4>
-            <p className="text-sm text-muted-foreground mb-3">support@ozgainz.com</p>
+            <a
+              href={businessContact.emailHref}
+              className="text-sm font-semibold text-oz-primary hover:underline block mb-3"
+            >
+              {businessContact.email}
+            </a>
             <Badge variant="outline" className="text-xs">
               24-48 hrs response
             </Badge>
           </CardContent>
         </Card>
       </div>
+
+      <Card className="bg-oz-neutral/40 border-dashed">
+        <CardContent className="pt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h4 className="font-medium mb-2">Visit Us</h4>
+            <address className="text-sm text-muted-foreground not-italic whitespace-pre-line leading-relaxed">
+              {businessContact.addressLines.join('\n')}
+            </address>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <Button asChild className="flex-1">
+              <a href={businessContact.phoneHref}>{businessContact.phone}</a>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="flex-1"
+            >
+              <a href={businessContact.googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                {businessContact.googleMapsLabel}
+              </a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <Card>

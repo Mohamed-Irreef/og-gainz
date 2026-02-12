@@ -34,6 +34,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { consultationService } from '@/services';
 import { useToast } from '@/hooks/use-toast';
+import { businessContact } from '@/config/contact';
 
 // Extended types for the consultation form
 type FitnessGoalExtended = 
@@ -472,6 +473,43 @@ const Consultation = () => {
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      <div className="container mx-auto px-4 pb-12">
+        <Card className="bg-oz-neutral/30 border-oz-neutral/50">
+          <CardContent className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-oz-primary mb-1">Prefer to talk to us directly?</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Reach our nutrition desk any day between 9 AM and 9 PM.
+              </p>
+              <div className="space-y-2 text-sm">
+                <a href={businessContact.phoneHref} className="font-semibold text-oz-secondary hover:underline block">
+                  {businessContact.phone}
+                </a>
+                <a href={businessContact.emailHref} className="font-semibold text-oz-secondary hover:underline block">
+                  {businessContact.email}
+                </a>
+                <address className="text-muted-foreground whitespace-pre-line not-italic">
+                  {businessContact.addressLines.join('\n')}
+                </address>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 w-full md:w-auto">
+              <Button asChild className="w-full">
+                <a href={businessContact.phoneHref}>Call Us</a>
+              </Button>
+              <Button asChild variant="outline" className="w-full">
+                <a href={businessContact.emailHref}>Email Us</a>
+              </Button>
+              <Button asChild variant="secondary" className="w-full">
+                <a href={businessContact.googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                  {businessContact.googleMapsLabel}
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -19,7 +19,8 @@ import { Progress } from "@/components/ui/progress";
 import { useUser } from "@/context/UserContext";
 import { dashboardService } from "@/services/dashboardService";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { SUPPORT_WHATSAPP_NUMBER } from "@/config/env";
+import { SUPPORT_WHATSAPP_NUMBER } from '@/config/env';
+import { businessContact } from '@/config/contact';
 import { useToast } from "@/hooks/use-toast";
 import type { MyDelivery } from "@/services/deliveriesService";
 
@@ -96,7 +97,7 @@ const Dashboard = () => {
       `Hi OG Gainz team, I need help with my subscription.\n\nName: ${data?.profile?.name || user?.name || 'User'}`
     );
     const n = String(SUPPORT_WHATSAPP_NUMBER || '').trim();
-    const phone = n || '919876543210';
+    const phone = n || businessContact.phoneDigits;
     window.open(`https://wa.me/${encodeURIComponent(phone)}?text=${message}`, '_blank');
   };
 

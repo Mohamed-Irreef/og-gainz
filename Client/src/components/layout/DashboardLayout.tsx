@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/UserContext";
 import { cn } from "@/lib/utils";
 import { SUPPORT_WHATSAPP_NUMBER } from "@/config/env";
+import { businessContact } from "@/config/contact";
 
 const sidebarLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -141,7 +142,7 @@ export function DashboardLayout() {
 								className="w-full justify-start bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800"
 								onClick={() => {
 										const n = String(SUPPORT_WHATSAPP_NUMBER || '').trim();
-										const phone = n || '919876543210';
+										const phone = n || businessContact.phoneDigits;
 										window.open(`https://wa.me/${encodeURIComponent(phone)}?text=Hi%20OG%20Gainz%20team,%20I%20need%20help%20with%20my%20subscription.`, '_blank');
 								}}
 							>
