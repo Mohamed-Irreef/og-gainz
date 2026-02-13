@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { buildYourOwnCatalogService } from '@/services/buildYourOwnCatalogService';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import type {
 	BuildYourOwnConfig,
 	BuildYourOwnItemEntity,
@@ -41,6 +42,38 @@ const formatQtyUnit = (value: number, unit: string) => `${value}${unit}`;
 const getRemainingToMinimum = (quote: BuildYourOwnQuote | null) => {
 	if (!quote) return 0;
 	return Math.max(0, (quote.minimumRequired || 0) - (quote.total || 0));
+};
+
+const toNumber = (value: unknown) => {
+	const parsed = Number(value ?? 0);
+	return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getModeMaximum = (config: BuildYourOwnConfig | null, mode: BuildYourOwnPurchaseMode) => {
+	if (!config) return 0;
+	if (mode === 'weekly') return toNumber(config.maximumWeeklyOrderAmount);
+	if (mode === 'monthly') return toNumber(config.maximumMonthlyOrderAmount);
+	return 0;
+};
+
+const getUnitPriceForMode = (item: BuildYourOwnItemEntity | undefined, mode: BuildYourOwnPurchaseMode) => {
+	if (!item) return 0;
+	return toNumber(item.pricing?.[mode]);
+};
+
+const calculateSelectionTotal = (
+	selections: Record<string, number>,
+	itemLookup: Map<string, BuildYourOwnItemEntity>,
+	mode: BuildYourOwnPurchaseMode
+) => {
+	let total = 0;
+	for (const [itemId, qty] of Object.entries(selections)) {
+		if (qty <= 0) continue;
+		const item = itemLookup.get(itemId);
+		if (!item) continue;
+		total += getUnitPriceForMode(item, mode) * qty;
+	}
+	return total;
 };
 
 function useAnimatedNumber(value: number, opts?: { durationMs?: number }) {
@@ -82,20 +115,32 @@ function QuantityStepper({
 	value,
 	onChange,
 	disabled,
+	disableIncrease,
+	disableDecrease,
 	label,
 }: {
 	value: number;
 	onChange: (next: number) => void;
 	disabled?: boolean;
+	disableIncrease?: boolean;
+	disableDecrease?: boolean;
 	label: string;
 }) {
 	const [shake, setShake] = useState(false);
-	const holdRef = useRef<number | null>(null);
+	const holdTimeoutRef = useRef<number | null>(null);
+	const holdIntervalRef = useRef<number | null>(null);
 	const holdStartRef = useRef<number | null>(null);
+	const valueRef = useRef(value);
+
+	useEffect(() => {
+		valueRef.current = value;
+	}, [value]);
 
 	const stopHold = () => {
-		if (holdRef.current) window.clearInterval(holdRef.current);
-		holdRef.current = null;
+		if (holdTimeoutRef.current) window.clearTimeout(holdTimeoutRef.current);
+		if (holdIntervalRef.current) window.clearInterval(holdIntervalRef.current);
+		holdTimeoutRef.current = null;
+		holdIntervalRef.current = null;
 		holdStartRef.current = null;
 	};
 
@@ -106,27 +151,43 @@ function QuantityStepper({
 
 	const change = (delta: number) => {
 		if (disabled) return;
-		const next = Math.max(0, value + delta);
-		if (next === value && delta < 0) bumpShake();
+		if (delta > 0 && disableIncrease) {
+			bumpShake();
+			return;
+		}
+		if (delta < 0 && (disableDecrease || valueRef.current <= 0)) {
+			bumpShake();
+			return;
+		}
+		const next = Math.max(0, valueRef.current + delta);
+		if (next === valueRef.current && delta < 0) bumpShake();
 		onChange(next);
 	};
 
 	const startHold = (delta: number) => {
 		if (disabled) return;
-		change(delta);
-		if (holdRef.current) stopHold();
+		if (delta > 0 && disableIncrease) {
+			bumpShake();
+			return;
+		}
+		if (delta < 0 && (disableDecrease || valueRef.current <= 0)) {
+			bumpShake();
+			return;
+		}
+		stopHold();
 		holdStartRef.current = Date.now();
-		holdRef.current = window.setInterval(() => {
-			const elapsed = Date.now() - (holdStartRef.current || Date.now());
-			// speed up slightly over time
-			const stepDelta = delta;
-			if (elapsed > 1200) {
+		holdTimeoutRef.current = window.setTimeout(() => {
+			holdIntervalRef.current = window.setInterval(() => {
+				const elapsed = Date.now() - (holdStartRef.current || Date.now());
+				const stepDelta = delta;
+				if (elapsed > 1200) {
+					change(stepDelta);
+					change(stepDelta);
+					return;
+				}
 				change(stepDelta);
-				change(stepDelta);
-				return;
-			}
-			change(stepDelta);
-		}, 140);
+			}, 120);
+		}, 320);
 	};
 
 	useEffect(() => () => stopHold(), []);
@@ -138,12 +199,12 @@ function QuantityStepper({
 					variant="outline"
 					size="icon"
 					className="h-8 w-8 min-h-[32px] min-w-[32px] rounded-full border-oz-neutral/30 bg-white transition-transform active:scale-95 hover:bg-oz-neutral/5"
-					disabled={disabled || value === 0}
-					onMouseDown={() => startHold(-1)}
-					onMouseUp={stopHold}
-					onMouseLeave={stopHold}
-					onTouchStart={() => startHold(-1)}
-					onTouchEnd={stopHold}
+					disabled={disabled || disableDecrease || value === 0}
+					onClick={() => change(-1)}
+					onPointerDown={() => startHold(-1)}
+					onPointerUp={stopHold}
+					onPointerLeave={stopHold}
+					onPointerCancel={stopHold}
 					aria-label={`${label}: decrease`}
 					type="button"
 				>
@@ -157,12 +218,12 @@ function QuantityStepper({
 				variant="outline"
 				size="icon"
 				className="h-8 w-8 min-h-[32px] min-w-[32px] rounded-full border-oz-neutral/30 bg-white transition-transform active:scale-95 hover:bg-oz-neutral/5"
-				disabled={disabled}
-				onMouseDown={() => startHold(1)}
-				onMouseUp={stopHold}
-				onMouseLeave={stopHold}
-				onTouchStart={() => startHold(1)}
-				onTouchEnd={stopHold}
+				disabled={disabled || disableIncrease}
+				onClick={() => change(1)}
+				onPointerDown={() => startHold(1)}
+				onPointerUp={stopHold}
+				onPointerLeave={stopHold}
+				onPointerCancel={stopHold}
 				aria-label={`${label}: increase`}
 				type="button"
 			>
@@ -410,6 +471,7 @@ function TrayPreview({
 export default function BuildYourOwn() {
 	const { addItem } = useCart();
 	const { toast } = useToast();
+	const handleBack = useSafeBack('/meal-packs');
 	const [itemTypes, setItemTypes] = useState<BuildYourOwnItemTypeEntity[]>([]);
 	const [items, setItems] = useState<BuildYourOwnItemEntity[]>([]);
 	const [config, setConfig] = useState<BuildYourOwnConfig | null>(null);
@@ -498,6 +560,12 @@ export default function BuildYourOwn() {
 			.map(([itemId, quantity]) => ({ itemId, quantity }));
 	}, [selections]);
 
+	const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+	const computedTotal = useMemo(() => calculateSelectionTotal(selections, itemById, mode), [itemById, mode, selections]);
+	const maximumAllowed = useMemo(() => getModeMaximum(config, mode), [config, mode]);
+	const hasMaximum = maximumAllowed > 0;
+	const totalForLimits = computedTotal;
+
 	useEffect(() => {
 		const controller = new AbortController();
 		if (quoteDebounceRef.current) window.clearTimeout(quoteDebounceRef.current);
@@ -519,7 +587,6 @@ export default function BuildYourOwn() {
 	}, [mode, selectionList]);
 
 	const hasSelections = useMemo(() => Object.values(selections).some((q) => q > 0), [selections]);
-	const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
 
 	const selectedDetails = useMemo(() => {
 		const lines = quote?.lineItems || [];
@@ -532,16 +599,42 @@ export default function BuildYourOwn() {
 			.filter((x): x is NonNullable<typeof x> => Boolean(x));
 	}, [quote?.lineItems, itemById]);
 
-	const updateQty = (itemId: string, delta: number) => {
-		setSelections((prev) => {
-			const current = prev[itemId] || 0;
-			const nextQty = Math.max(0, current + delta);
-			if (nextQty === 0) {
-				const { [itemId]: _, ...rest } = prev;
-				return rest;
+	const buildNextSelections = (prev: Record<string, number>, itemId: string, nextQty: number) => {
+		const current = prev[itemId] || 0;
+		let safeNext = Number.isFinite(nextQty) ? Math.max(0, Math.floor(nextQty)) : 0;
+		if (safeNext === current) return prev;
+
+		const item = itemById.get(itemId);
+		if (safeNext > current && hasMaximum && item) {
+			const unitPrice = getUnitPriceForMode(item, mode);
+			if (unitPrice > 0) {
+				const currentTotal = calculateSelectionTotal(prev, itemById, mode);
+				const remaining = maximumAllowed - currentTotal;
+				const maxAdditional = Math.max(0, Math.floor(remaining / unitPrice));
+				const cappedNext = Math.min(safeNext, current + maxAdditional);
+				if (cappedNext === current) return prev;
+				safeNext = cappedNext;
 			}
-			return { ...prev, [itemId]: nextQty };
-		});
+		}
+
+		if (safeNext === 0) {
+			const { [itemId]: _, ...rest } = prev;
+			return rest;
+		}
+		return { ...prev, [itemId]: safeNext };
+	};
+
+	const setQty = (itemId: string, nextQty: number) => {
+		setSelections((prev) => buildNextSelections(prev, itemId, nextQty));
+	};
+
+	const updateQty = (itemId: string, delta: number) => {
+		setSelections((prev) => buildNextSelections(prev, itemId, (prev[itemId] || 0) + delta));
+	};
+
+	const canIncrementByPrice = (unitPrice: number) => {
+		if (!hasMaximum || unitPrice <= 0) return true;
+		return totalForLimits + unitPrice <= maximumAllowed;
 	};
 
 	const totalAnimated = useAnimatedNumber(quote?.total || 0);
@@ -556,7 +649,7 @@ export default function BuildYourOwn() {
 		<Card className="border-oz-neutral/40 bg-white/95 backdrop-blur">
 			<CardHeader className="pb-3">
 				<CardTitle className="text-base font-semibold text-oz-primary md:text-lg">Live Summary</CardTitle>
-				<div className="text-xs text-muted-foreground">Totals and minimums are computed by the server.</div>
+				<div className="text-xs text-muted-foreground">Totals and order rules are computed by the server.</div>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div className="rounded-2xl border bg-oz-neutral/5 p-4">
@@ -631,6 +724,38 @@ export default function BuildYourOwn() {
 					})()
 				) : null}
 
+				{/* Maximum progress */}
+				{(mode === 'weekly' || mode === 'monthly') && hasMaximum ? (
+					(() => {
+						const remaining = Math.max(0, maximumAllowed - totalForLimits);
+						const atOrOver = totalForLimits >= maximumAllowed;
+						const progress = maximumAllowed > 0 ? clamp(totalForLimits / maximumAllowed, 0, 1) : 0;
+						return (
+							<div className={atOrOver ? 'rounded-2xl border border-rose-200 bg-rose-50 p-4' : 'rounded-2xl border border-blue-200 bg-blue-50 p-4'}>
+								<div className="flex items-start gap-3">
+									<div className={atOrOver ? 'mt-0.5 rounded-full bg-rose-100 p-1' : 'mt-0.5 rounded-full bg-blue-100 p-1'}>
+										{atOrOver ? <AlertCircle className="h-4 w-4 text-rose-700" /> : <Check className="h-4 w-4 text-blue-700" />}
+									</div>
+									<div className="min-w-0 flex-1">
+										<div className={atOrOver ? 'text-sm font-semibold text-rose-900' : 'text-sm font-semibold text-blue-900'}>
+											{atOrOver ? 'Maximum reached' : `₹${Math.round(remaining)} left before ${mode} maximum`}
+										</div>
+										<div className={atOrOver ? 'text-xs text-rose-800/80 mt-0.5' : 'text-xs text-blue-800/80 mt-0.5'}>
+											Maximum: {formatCurrency(maximumAllowed)} • Current: {formatCurrency(totalForLimits)}
+										</div>
+										<div className="mt-3 h-2 w-full rounded-full bg-white/70 border border-white/60 overflow-hidden">
+											<div
+												className={atOrOver ? 'h-full bg-rose-500 transition-all duration-500' : 'h-full bg-blue-500 transition-all duration-500'}
+												style={{ width: `${Math.round(progress * 100)}%` }}
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+						);
+					})()
+				) : null}
+
 				<div className="space-y-2">
 					<div className="text-sm font-semibold text-oz-primary">Purchase mode</div>
 					<div className="grid grid-cols-3 gap-2">
@@ -679,7 +804,14 @@ export default function BuildYourOwn() {
 										<Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQty(item.itemId, -1)} aria-label={`Decrease ${item.name}`}>
 											<Minus className="h-4 w-4" />
 										</Button>
-										<Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQty(item.itemId, 1)} aria-label={`Increase ${item.name}`}>
+										<Button
+											variant="outline"
+											size="icon"
+											className="h-8 w-8"
+											disabled={!canIncrementByPrice(item.unitPrice)}
+											onClick={() => updateQty(item.itemId, 1)}
+											aria-label={`Increase ${item.name}`}
+										>
 											<Plus className="h-4 w-4" />
 										</Button>
 										<Button
@@ -711,7 +843,8 @@ export default function BuildYourOwn() {
 							!hasSelections ||
 							quoteLoading ||
 							!quote ||
-							((mode === 'weekly' || mode === 'monthly') && !quote.meetsMinimum)
+							((mode === 'weekly' || mode === 'monthly') && !quote.meetsMinimum) ||
+							(hasMaximum && totalForLimits > maximumAllowed)
 						}
 						onClick={() => {
 						if (!hasSelections) {
@@ -720,6 +853,14 @@ export default function BuildYourOwn() {
 						}
 						if (!quote) {
 							toast({ title: 'Please wait', description: 'Computing BYO totals…', variant: 'destructive' });
+							return;
+						}
+						if (hasMaximum && totalForLimits > maximumAllowed) {
+							toast({
+								title: 'Maximum exceeded',
+								description: `Maximum ${mode} order is ${formatCurrency(maximumAllowed)}.`,
+								variant: 'destructive',
+							});
 							return;
 						}
 						if ((mode === 'weekly' || mode === 'monthly') && !quote.meetsMinimum) {
@@ -792,10 +933,10 @@ export default function BuildYourOwn() {
 				
 				{/* Content */}
 				<div className="container mx-auto px-4 relative z-10">
-					<Link to="/" className="inline-flex items-center text-white/90 hover:text-white text-sm font-medium transition-colors">
+					<button type="button" onClick={handleBack} className="inline-flex items-center text-white/90 hover:text-white text-sm font-medium transition-colors">
 						<ArrowLeft className="mr-2 h-4 w-4" />
 						Back
-					</Link>
+					</button>
 					<div className="max-w-3xl mx-auto text-center mt-6">
 						<h1 className="text-2xl font-bold leading-tight mb-3 md:text-4xl lg:text-5xl">Build Your Own Meal</h1>
 						<p className="text-sm leading-relaxed text-white/90 max-w-2xl mx-auto md:text-lg">
@@ -889,9 +1030,10 @@ export default function BuildYourOwn() {
 															<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 																{(byType.get(t.id) || []).map((item) => {
 																	const qty = selections[item.id] || 0;
-																	const unitPrice = item.pricing?.[mode] ?? 0;
+																	const unitPrice = getUnitPriceForMode(item, mode);
 																	const disabled = item.isActive === false;
 																	const highProtein = typeof item.proteinGrams === 'number' && item.proteinGrams >= 20;
+																	const increaseAllowed = !disabled && canIncrementByPrice(unitPrice);
 																	return (
 																		<Card
 																			key={item.id}
@@ -959,13 +1101,17 @@ export default function BuildYourOwn() {
 																								<div className="mt-3 flex items-start justify-between gap-3">
 																									<div>
 																										<div className="text-xl font-semibold leading-none text-oz-primary">{formatCurrency(unitPrice)}</div>
-																										<div className="mt-1 text-[12px] font-medium text-oz-primary/55">per week</div>
+																										<div className="mt-1 text-[12px] font-medium text-oz-primary/55">
+																											{mode === 'monthly' ? 'per month' : mode === 'weekly' ? 'per week' : 'per order'}
+																										</div>
 																									</div>
 																									<div className="flex flex-col items-center gap-2">
 																										<QuantityStepper
 																											value={qty}
-																											onChange={(next) => setSelections((prev) => ({ ...prev, [item.id]: next }))}
+																											onChange={(next) => setQty(item.id, next)}
 																											disabled={disabled}
+																											disableIncrease={!increaseAllowed}
+																											disableDecrease={qty === 0}
 																											label={item.name}
 																										/>
 																									</div>
@@ -993,7 +1139,11 @@ export default function BuildYourOwn() {
 										<div>
 											<div className="text-base font-semibold text-oz-primary">Minimum order rules</div>
 											<div className="text-sm leading-relaxed text-muted-foreground mt-1">
-												Weekly minimum: {formatCurrency(config?.minimumWeeklyOrderAmount || 0)} · Monthly minimum: {formatCurrency(config?.minimumMonthlyOrderAmount || 0)}
+												Weekly minimum: {formatCurrency(config?.minimumWeeklyOrderAmount || 0)} · Weekly maximum:{' '}
+												{toNumber(config?.maximumWeeklyOrderAmount) > 0 ? formatCurrency(toNumber(config?.maximumWeeklyOrderAmount)) : 'No maximum'}
+												<br />
+												Monthly minimum: {formatCurrency(config?.minimumMonthlyOrderAmount || 0)} · Monthly maximum:{' '}
+												{toNumber(config?.maximumMonthlyOrderAmount) > 0 ? formatCurrency(toNumber(config?.maximumMonthlyOrderAmount)) : 'No maximum'}
 											</div>
 										</div>
 									</div>

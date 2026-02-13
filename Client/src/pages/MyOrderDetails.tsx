@@ -10,6 +10,7 @@ import { formatCurrency } from '@/utils/formatCurrency';
 import { ordersService } from '@/services/ordersService';
 import type { PublicOrder } from '@/types/ordersPhase5b';
 import { normalizeOrderFlags } from '@/types/ordersPhase5b';
+import { useSafeBack } from '@/hooks/use-safe-back';
 
 const formatDateTime = (dateString: string) => {
 	return new Date(dateString).toLocaleDateString('en-IN', {
@@ -23,6 +24,7 @@ const formatDateTime = (dateString: string) => {
 
 export default function MyOrderDetails() {
 	const { orderId } = useParams();
+	const handleBack = useSafeBack('/my-orders');
 	const [order, setOrder] = useState<PublicOrder | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -132,11 +134,9 @@ export default function MyOrderDetails() {
 	return (
 		<div className="container mx-auto px-4 py-8 animate-fade-in">
 			<div className="flex items-center justify-between gap-3 mb-6">
-				<Button asChild variant="ghost">
-					<Link to="/my-orders">
-						<ArrowLeft className="h-4 w-4 mr-2" />
-						Back
-					</Link>
+				<Button variant="ghost" onClick={handleBack}>
+					<ArrowLeft className="h-4 w-4 mr-2" />
+					Back
 				</Button>
 				<Button variant="outline" onClick={() => void load()}>
 					<RefreshCw className="h-4 w-4 mr-2" />

@@ -19,6 +19,7 @@ const adminPauseSkipRoutes = require('./admin.pauseSkip.routes');
 const adminConsultationRoutes = require('./admin.consultation.routes');
 const adminDashboardRoutes = require('./admin.dashboard.routes');
 const adminUsersRoutes = require('./admin.users.routes');
+const adminWalletRoutes = require('./admin.wallet.routes');
 
 const router = express.Router();
 
@@ -61,6 +62,7 @@ router.use('/dashboard', adminDashboardRoutes);
 
 // Users (secured)
 router.use('/users', adminUsersRoutes);
+router.use('/wallet', adminWalletRoutes);
 
 // Minimal protected stub endpoint
 router.get('/status', (req, res) => {

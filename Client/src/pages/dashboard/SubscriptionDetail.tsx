@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { useToast } from '@/hooks/use-toast';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { deliveriesService, type MyDelivery } from '@/services/deliveriesService';
 import { ordersService } from '@/services/ordersService';
 import { pauseSkipService } from '@/services/pauseSkipService';
@@ -135,7 +136,14 @@ const formatLeadTime = (minutes: number) => {
 
 export default function SubscriptionDetailPage() {
 	const { toast } = useToast();
+	const pauseSkipDisabled = true;
+	const disabledActionClass = pauseSkipDisabled ? 'opacity-60 cursor-not-allowed' : '';
+	const showComingSoon = () => {
+		// TODO: Re-enable pause/skip workflows when the backend rollout is ready.
+		toast({ title: 'This feature will be coming soon.' });
+	};
 	const { id } = useParams<{ id: string }>();
+	const handleBack = useSafeBack('/dashboard/subscriptions');
 	const subscriptionId = safeString(id);
 
 	const [loading, setLoading] = useState(true);
@@ -381,6 +389,10 @@ export default function SubscriptionDetailPage() {
 	}, [pendingPauseRequest, approvedEffectivePauseRequest, pendingWithdrawByPauseId]);
 
 	const withdrawPendingRequest = async (requestId: string) => {
+		if (pauseSkipDisabled) {
+			showComingSoon();
+			return;
+		}
 		setWithdrawingRequestId(requestId);
 		try {
 			await pauseSkipService.withdrawRequest(requestId);
@@ -398,6 +410,10 @@ export default function SubscriptionDetailPage() {
 	};
 
 	const requestWithdrawPause = async (pauseRequestId: string) => {
+		if (pauseSkipDisabled) {
+			showComingSoon();
+			return;
+		}
 		setWithdrawingRequestId(pauseRequestId);
 		try {
 			const created = await pauseSkipService.requestWithdrawPause(pauseRequestId);
@@ -458,6 +474,10 @@ export default function SubscriptionDetailPage() {
 	}, [nextActiveDelivery, pauseCutoffMinutes]);
 
 	const openPause = () => {
+		if (pauseSkipDisabled) {
+			showComingSoon();
+			return;
+		}
 		const t = (() => {
 			const d = new Date();
 			d.setDate(d.getDate() + 1);
@@ -470,6 +490,10 @@ export default function SubscriptionDetailPage() {
 	};
 
 	const submitPause = async () => {
+		if (pauseSkipDisabled) {
+			showComingSoon();
+			return;
+		}
 		setPauseSaving(true);
 		try {
 			await pauseSkipService.requestPause({
@@ -495,6 +519,10 @@ export default function SubscriptionDetailPage() {
 	};
 
 	const requestSkip = async () => {
+		if (pauseSkipDisabled) {
+			showComingSoon();
+			return;
+		}
 		if (!todayDeliveryId) return;
 		setSkipSavingId(todayDeliveryId);
 		try {
@@ -517,9 +545,7 @@ export default function SubscriptionDetailPage() {
 		return (
 			<div className="space-y-4">
 				<div className="text-sm text-muted-foreground">Missing subscription id.</div>
-				<Link to="/dashboard/subscriptions">
-					<Button variant="outline">Back to Subscriptions</Button>
-				</Link>
+				<Button variant="outline" onClick={handleBack}>Back to Subscriptions</Button>
 			</div>
 		);
 	}
@@ -551,7 +577,11 @@ export default function SubscriptionDetailPage() {
 							<Button variant="outline" onClick={() => setPauseRequestOpen(false)} disabled={pauseSaving}>
 								Cancel
 							</Button>
-							<Button onClick={submitPause} disabled={pauseSaving || !pauseStart || !pauseEnd}>
+							<Button
+								onClick={submitPause}
+								disabled={pauseSkipDisabled ? false : pauseSaving || !pauseStart || !pauseEnd}
+								className={disabledActionClass}
+							>
 								Submit Request
 							</Button>
 						</div>
@@ -560,13 +590,14 @@ export default function SubscriptionDetailPage() {
 			</Dialog>
 
 			<div className="flex items-center justify-between gap-3">
-				<Link
-					to="/dashboard/subscriptions"
+				<button
+					type="button"
+					onClick={handleBack}
 					className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
 				>
 					<ChevronLeft className="h-4 w-4" />
 					Back to Subscriptions
-				</Link>
+				</button>
 				<Link to="/dashboard/deliveries">
 					<Button variant="outline" size="sm">Open Deliveries</Button>
 				</Link>
@@ -602,7 +633,13 @@ export default function SubscriptionDetailPage() {
 							const disabledByState = pauseState.state !== 'none';
 							const disabledByCutoff = pauseState.state === 'none' && isPauseCutoffExceeded;
 							const btn = (
-								<Button variant="outline" size="sm" onClick={openPause} disabled={disabledByState || disabledByCutoff}>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={openPause}
+									disabled={pauseSkipDisabled ? false : disabledByState || disabledByCutoff}
+									className={disabledActionClass}
+								>
 									<Pause className="mr-2 h-4 w-4" />
 									{pauseState.state === 'pending' ? 'Pause Requested' : 'Request Pause'}
 								</Button>
@@ -628,7 +665,8 @@ export default function SubscriptionDetailPage() {
 									variant="outline"
 									size="sm"
 									onClick={() => withdrawPendingRequest(pauseState.request!.id)}
-									disabled={withdrawingRequestId === pauseState.request!.id}
+									disabled={pauseSkipDisabled ? false : withdrawingRequestId === pauseState.request!.id}
+									className={disabledActionClass}
 								>
 									Withdraw Request
 								</Button>
@@ -637,7 +675,8 @@ export default function SubscriptionDetailPage() {
 									variant="outline"
 									size="sm"
 									onClick={() => requestWithdrawPause(pauseState.request!.id)}
-									disabled={pauseState.withdrawPending || withdrawingRequestId === pauseState.request!.id}
+									disabled={pauseSkipDisabled ? false : pauseState.withdrawPending || withdrawingRequestId === pauseState.request!.id}
+									className={disabledActionClass}
 								>
 									{pauseState.withdrawPending ? 'Withdraw Requested' : 'Withdraw Pause'}
 								</Button>
@@ -647,7 +686,13 @@ export default function SubscriptionDetailPage() {
 						{(() => {
 							const disabled = !canRequestSkipToday || skipSavingId === todayDeliveryId;
 							const btn = (
-								<Button variant="outline" size="sm" onClick={requestSkip} disabled={disabled}>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={requestSkip}
+									disabled={pauseSkipDisabled ? false : disabled}
+									className={disabledActionClass}
+								>
 									{todayDeliveryId && pendingSkipByDeliveryId.has(todayDeliveryId) ? 'Skip Requested' : 'Request Skip (Today)'}
 								</Button>
 							);

@@ -16,3 +16,5 @@ export { default as AdminKitchen } from './Kitchen';
 export { default as AdminSubscriptions } from './Subscriptions';
 export { default as AdminUsers } from './Users';
 export { default as AdminUserDetails } from './UserDetails';
+export { default as AdminWallet } from './Wallet';
+export { default as AdminSettings } from './Settings';

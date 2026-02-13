@@ -7,12 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
 	AlertDialog,
@@ -29,6 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { adminAddonCategoriesService } from '@/services/adminAddonCategoriesService';
 import type { AddonCategoryEntity } from '@/types/catalog';
+import { AdminFormLayout, ADMIN_FORM_GRID, FormField } from '@/components/admin';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
 
@@ -301,49 +297,53 @@ export default function AdminAddonCategories() {
 
 			{/* Create Dialog */}
 			<Dialog open={createOpen} onOpenChange={setCreateOpen}>
-				<DialogContent className="max-w-xl">
-					<DialogHeader>
-						<DialogTitle>New Add-on Category</DialogTitle>
-						<DialogDescription>Create a new category for add-ons.</DialogDescription>
-					</DialogHeader>
-
-					<div className="space-y-4">
-						<div className="space-y-2">
-							<Label>Name</Label>
-							<Input value={String(createDraft.name || '')} onChange={(e) => setCreateDraft((d) => ({ ...d, name: e.target.value }))} />
+				<DialogContent className="max-w-5xl p-0">
+					<AdminFormLayout
+						title="New Add-on Category"
+						description="Create a new category for add-ons."
+						stickyActions
+						actions={
+							<>
+								<Button variant="outline" className="h-11 rounded-xl" onClick={() => setCreateOpen(false)} disabled={creating}>
+									Cancel
+								</Button>
+								<Button className="h-11 rounded-xl" onClick={submitCreate} disabled={creating || !createDraft.name?.trim()}>
+									{creating ? 'Creating…' : 'Create'}
+								</Button>
+							</>
+						}
+					>
+						<div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+							<div className={ADMIN_FORM_GRID}>
+								<FormField label="Name" required>
+									<Input value={String(createDraft.name || '')} onChange={(e) => setCreateDraft((d) => ({ ...d, name: e.target.value }))} />
+								</FormField>
+								<FormField label="Slug (optional)">
+									<Input value={String(createDraft.slug || '')} onChange={(e) => setCreateDraft((d) => ({ ...d, slug: e.target.value }))} placeholder="auto-generated if blank" />
+								</FormField>
+								<FormField label="Description (optional)" className="md:col-span-2">
+									<Textarea value={String(createDraft.description || '')} onChange={(e) => setCreateDraft((d) => ({ ...d, description: e.target.value }))} className="min-h-[120px]" />
+								</FormField>
+								<FormField label="Display order">
+									<Input
+										type="number"
+										value={createDraft.displayOrder == null ? '' : String(createDraft.displayOrder)}
+										onChange={(e) => {
+											const v = e.target.value;
+											setCreateDraft((d) => ({ ...d, displayOrder: v === '' ? undefined : safeNumber(v) }));
+										}}
+										min={0}
+									/>
+								</FormField>
+								<FormField label="Status" applyInputStyles={false}>
+									<div className="flex h-11 items-center justify-between rounded-xl border px-4">
+										<span className="text-sm">Active</span>
+										<Switch checked={Boolean(createDraft.isActive)} onCheckedChange={(checked) => setCreateDraft((d) => ({ ...d, isActive: checked }))} />
+									</div>
+								</FormField>
+							</div>
 						</div>
-						<div className="space-y-2">
-							<Label>Slug (optional)</Label>
-							<Input value={String(createDraft.slug || '')} onChange={(e) => setCreateDraft((d) => ({ ...d, slug: e.target.value }))} placeholder="auto-generated if blank" />
-						</div>
-						<div className="space-y-2">
-							<Label>Description (optional)</Label>
-							<Textarea value={String(createDraft.description || '')} onChange={(e) => setCreateDraft((d) => ({ ...d, description: e.target.value }))} />
-						</div>
-						<div className="space-y-2">
-							<Label>Display order</Label>
-							<Input
-								type="number"
-								value={createDraft.displayOrder == null ? '' : String(createDraft.displayOrder)}
-								onChange={(e) => {
-									const v = e.target.value;
-									setCreateDraft((d) => ({ ...d, displayOrder: v === '' ? undefined : safeNumber(v) }));
-								}}
-								min={0}
-							/>
-						</div>
-						<div className="flex items-center gap-2">
-							<Switch checked={Boolean(createDraft.isActive)} onCheckedChange={(checked) => setCreateDraft((d) => ({ ...d, isActive: checked }))} />
-							<span className="text-sm">Active</span>
-						</div>
-					</div>
-
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
-						<Button onClick={submitCreate} disabled={creating || !createDraft.name?.trim()}>
-							{creating ? 'Creating…' : 'Create'}
-						</Button>
-					</DialogFooter>
+					</AdminFormLayout>
 				</DialogContent>
 			</Dialog>
 
@@ -352,53 +352,59 @@ export default function AdminAddonCategories() {
 				setEditOpen(open);
 				if (!open) setEditItem(null);
 			}}>
-				<DialogContent className="max-w-xl">
-					<DialogHeader>
-						<DialogTitle>Edit Add-on Category</DialogTitle>
-						<DialogDescription>Update category details.</DialogDescription>
-					</DialogHeader>
-
-					{!editItem ? (
-						<div className="py-8"><Skeleton className="h-32 w-full" /></div>
-					) : (
-						<div className="space-y-4">
-							<div className="space-y-2">
-								<Label>Name</Label>
-								<Input value={String(editDraft.name || '')} onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))} />
+				<DialogContent className="max-w-5xl p-0">
+					<AdminFormLayout
+						title="Edit Add-on Category"
+						description="Update category details."
+						stickyActions
+						actions={
+							<>
+								<Button variant="outline" className="h-11 rounded-xl" onClick={() => setEditOpen(false)} disabled={saving}>
+									Close
+								</Button>
+								<Button className="h-11 rounded-xl" onClick={submitEdit} disabled={!editItem || saving || !editDraft.name?.trim()}>
+									{saving ? 'Saving…' : 'Save'}
+								</Button>
+							</>
+						}
+					>
+						{!editItem ? (
+							<div className="p-6">
+								<Skeleton className="h-32 w-full rounded-xl" />
 							</div>
-							<div className="space-y-2">
-								<Label>Slug</Label>
-								<Input value={String(editDraft.slug || '')} onChange={(e) => setEditDraft((d) => ({ ...d, slug: e.target.value }))} />
+						) : (
+							<div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+								<div className={ADMIN_FORM_GRID}>
+									<FormField label="Name" required>
+										<Input value={String(editDraft.name || '')} onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))} />
+									</FormField>
+									<FormField label="Slug">
+										<Input value={String(editDraft.slug || '')} onChange={(e) => setEditDraft((d) => ({ ...d, slug: e.target.value }))} />
+									</FormField>
+									<FormField label="Description (optional)" className="md:col-span-2">
+										<Textarea value={String(editDraft.description || '')} onChange={(e) => setEditDraft((d) => ({ ...d, description: e.target.value }))} className="min-h-[120px]" />
+									</FormField>
+									<FormField label="Display order">
+										<Input
+											type="number"
+											value={editDraft.displayOrder == null ? '' : String(editDraft.displayOrder)}
+											onChange={(e) => {
+												const v = e.target.value;
+												setEditDraft((d) => ({ ...d, displayOrder: v === '' ? undefined : safeNumber(v) }));
+											}}
+											min={0}
+										/>
+									</FormField>
+									<FormField label="Status" applyInputStyles={false}>
+										<div className="flex h-11 items-center justify-between rounded-xl border px-4">
+											<span className="text-sm">Active</span>
+											<Switch checked={Boolean(editDraft.isActive)} onCheckedChange={(checked) => setEditDraft((d) => ({ ...d, isActive: checked }))} />
+										</div>
+									</FormField>
+								</div>
 							</div>
-							<div className="space-y-2">
-								<Label>Description (optional)</Label>
-								<Textarea value={String(editDraft.description || '')} onChange={(e) => setEditDraft((d) => ({ ...d, description: e.target.value }))} />
-							</div>
-							<div className="space-y-2">
-								<Label>Display order</Label>
-								<Input
-									type="number"
-									value={editDraft.displayOrder == null ? '' : String(editDraft.displayOrder)}
-									onChange={(e) => {
-										const v = e.target.value;
-										setEditDraft((d) => ({ ...d, displayOrder: v === '' ? undefined : safeNumber(v) }));
-									}}
-									min={0}
-								/>
-							</div>
-							<div className="flex items-center gap-2">
-								<Switch checked={Boolean(editDraft.isActive)} onCheckedChange={(checked) => setEditDraft((d) => ({ ...d, isActive: checked }))} />
-								<span className="text-sm">Active</span>
-							</div>
-						</div>
-					)}
-
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setEditOpen(false)} disabled={saving}>Close</Button>
-						<Button onClick={submitEdit} disabled={!editItem || saving || !editDraft.name?.trim()}>
-							{saving ? 'Saving…' : 'Save'}
-						</Button>
-					</DialogFooter>
+						)}
+					</AdminFormLayout>
 				</DialogContent>
 			</Dialog>
 		</div>

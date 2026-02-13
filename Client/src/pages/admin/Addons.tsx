@@ -19,12 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
 	Select,
@@ -50,6 +45,7 @@ import { adminAddonCategoriesService } from '@/services/adminAddonCategoriesServ
 import type { AddonCategory, AddonCategoryEntity } from '@/types/catalog';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { ImageDropzone, validateImageFile } from '@/components/shared/ImageDropzone';
+import { AdminFormLayout, ADMIN_FORM_GRID, FormField } from '@/components/admin';
 
 type AdminAddon = Awaited<ReturnType<typeof adminAddonsService.list>>['data'][number];
 
@@ -599,203 +595,197 @@ export default function AdminAddons() {
 				setCreateOpen(open);
 				if (!open) resetCreate();
 			}}>
-				<DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-					<DialogHeader>
-						<DialogTitle>New Add-on</DialogTitle>
-						<DialogDescription>Creates an add-on in the catalog.</DialogDescription>
-					</DialogHeader>
+				<DialogContent className="max-w-5xl p-0">
+					<AdminFormLayout
+						title="New Add-on"
+						description="Creates an add-on in the catalog."
+						stickyActions
+						actions={
+							<>
+								<Button variant="outline" className="h-11 rounded-xl" onClick={() => setCreateOpen(false)} disabled={creating}>
+									Cancel
+								</Button>
+								<Button className="h-11 rounded-xl" onClick={handleCreate} disabled={creating || !canSubmitDraft(createDraft)}>
+									{creating ? 'Creating…' : 'Create Add-on'}
+								</Button>
+							</>
+						}
+					>
+						<div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+							<div className={ADMIN_FORM_GRID}>
+								<FormField label="Name" required className="md:col-span-2">
+									<Input
+										value={String(createDraft.name || '')}
+										onChange={(e) => setCreateDraft((d) => ({ ...d, name: e.target.value }))}
+										placeholder="e.g. Extra Chicken"
+									/>
+								</FormField>
+								<FormField label="Category" required applyInputStyles={false}>
+									<Select
+										value={String((createDraft as unknown as { categoryId?: string }).categoryId || '')}
+										onValueChange={(v) => {
+											const selected = categoryOptions.find((c) => c.id === v);
+											setCreateDraft((d) => ({
+												...d,
+												categoryId: v,
+												category: selected?.slug || (d.category as AddonCategory),
+											}));
+										}}
+									>
+										<SelectTrigger className="h-11 rounded-xl px-4">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{categoriesLoading ? (
+												<SelectItem value="" disabled>Loading…</SelectItem>
+											) : categoryOptions.length === 0 ? (
+												<SelectItem value="" disabled>No categories found</SelectItem>
+											) : (
+												categoryOptions.map((c) => (
+													<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+												))
+											)}
+										</SelectContent>
+									</Select>
+								</FormField>
 
-					<div className="flex-1 overflow-y-auto pr-1">
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						<div className="space-y-2">
-							<Label>Name</Label>
-							<Input
-								value={String(createDraft.name || '')}
-								onChange={(e) => setCreateDraft((d) => ({ ...d, name: e.target.value }))}
-								placeholder="e.g. Extra Chicken"
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Category</Label>
-							<Select
-								value={String((createDraft as unknown as { categoryId?: string }).categoryId || '')}
-								onValueChange={(v) => {
-									const selected = categoryOptions.find((c) => c.id === v);
-									setCreateDraft((d) => ({
-										...d,
-										categoryId: v,
-										category: selected?.slug || (d.category as AddonCategory),
-									}));
-								}}
-							>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{categoriesLoading ? (
-										<SelectItem value="" disabled>Loading…</SelectItem>
-									) : categoryOptions.length === 0 ? (
-										<SelectItem value="" disabled>No categories found</SelectItem>
-									) : (
-										categoryOptions.map((c) => (
-											<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-										))
-									)}
-								</SelectContent>
-							</Select>
-						</div>
+								<FormField label="Single price (INR)" required>
+									<Input
+										type="number"
+										value={String(getSinglePrice(createDraft))}
+										onChange={(e) => {
+											const single = safeNumber(e.target.value);
+											setCreateDraft((d) => ({
+												...d,
+												pricing: { ...(d.pricing || { single: 0 }), single },
+											}));
+										}}
+										min={0}
+									/>
+								</FormField>
+								<FormField label="Weekly subscription price (optional)">
+									<Input
+										type="number"
+										value={getWeeklyPrice(createDraft) == null ? '' : String(getWeeklyPrice(createDraft))}
+										onChange={(e) => {
+											const raw = e.target.value;
+											setCreateDraft((d) => {
+												const base = { ...(d.pricing || { single: getSinglePrice(d) }) } as { single: number; weekly?: number; monthly?: number };
+												if (raw === '') {
+													const { weekly: _weekly, ...rest } = base;
+													return { ...d, pricing: rest };
+												}
+												return { ...d, pricing: { ...base, weekly: safeNumber(raw) } };
+											});
+										}}
+										min={0}
+									/>
+								</FormField>
+								<FormField label="Monthly price (optional)">
+									<Input
+										type="number"
+										value={getMonthlyPrice(createDraft) == null ? '' : String(getMonthlyPrice(createDraft))}
+										onChange={(e) => {
+											const raw = e.target.value;
+											setCreateDraft((d) => {
+												const base = { ...(d.pricing || { single: getSinglePrice(d) }) };
+												if (raw === '') {
+													const { monthly: _monthly, ...rest } = base as { single: number; monthly?: number };
+													return { ...d, pricing: rest };
+												}
+												return { ...d, pricing: { ...base, monthly: safeNumber(raw) } };
+											});
+										}}
+										min={0}
+									/>
+								</FormField>
+								<FormField label="Weekly servings">
+									<Input
+										type="number"
+										value={String(getWeeklyServings(createDraft))}
+										onChange={(e) => {
+											const v = Math.max(1, safeNumber(e.target.value));
+											setCreateDraft((d) => ({ ...d, servings: { weekly: v, monthly: getMonthlyServings(d) } }));
+										}}
+										min={1}
+									/>
+								</FormField>
+								<FormField label="Monthly servings">
+									<Input
+										type="number"
+										value={String(getMonthlyServings(createDraft))}
+										onChange={(e) => {
+											const v = Math.max(1, safeNumber(e.target.value));
+											setCreateDraft((d) => ({ ...d, servings: { weekly: getWeeklyServings(d), monthly: v } }));
+										}}
+										min={1}
+									/>
+								</FormField>
+								<FormField label="Protein grams (optional)">
+									<Input
+										type="number"
+										value={createDraft.proteinGrams == null ? '' : String(createDraft.proteinGrams)}
+										onChange={(e) => {
+											const v = e.target.value;
+											setCreateDraft((d) => ({ ...d, proteinGrams: v === '' ? undefined : Math.max(0, safeNumber(v)) }));
+										}}
+										min={0}
+									/>
+								</FormField>
 
-						<div className="space-y-2">
-							<Label>Single price (INR)</Label>
-							<Input
-								type="number"
-								value={String(getSinglePrice(createDraft))}
-								onChange={(e) => {
-									const single = safeNumber(e.target.value);
-									setCreateDraft((d) => ({
-										...d,
-										pricing: { ...(d.pricing || { single: 0 }), single },
-									}));
-								}}
-								min={0}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Weekly subscription price (optional)</Label>
-							<Input
-								type="number"
-								value={getWeeklyPrice(createDraft) == null ? '' : String(getWeeklyPrice(createDraft))}
-								onChange={(e) => {
-									const raw = e.target.value;
-									setCreateDraft((d) => {
-										const base = { ...(d.pricing || { single: getSinglePrice(d) }) } as { single: number; weekly?: number; monthly?: number };
-										if (raw === '') {
-											const { weekly: _weekly, ...rest } = base;
-											return { ...d, pricing: rest };
-										}
-										return { ...d, pricing: { ...base, weekly: safeNumber(raw) } };
-									});
-								}}
-								min={0}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Monthly price (optional)</Label>
-							<Input
-								type="number"
-								value={getMonthlyPrice(createDraft) == null ? '' : String(getMonthlyPrice(createDraft))}
-								onChange={(e) => {
-									const raw = e.target.value;
-									setCreateDraft((d) => {
-										const base = { ...(d.pricing || { single: getSinglePrice(d) }) };
-										if (raw === '') {
-											const { monthly: _monthly, ...rest } = base as { single: number; monthly?: number };
-											return { ...d, pricing: rest };
-										}
-										return { ...d, pricing: { ...base, monthly: safeNumber(raw) } };
-									});
-								}}
-								min={0}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Weekly servings</Label>
-							<Input
-								type="number"
-								value={String(getWeeklyServings(createDraft))}
-								onChange={(e) => {
-									const v = Math.max(1, safeNumber(e.target.value));
-									setCreateDraft((d) => ({ ...d, servings: { weekly: v, monthly: getMonthlyServings(d) } }));
-								}}
-								min={1}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Monthly servings</Label>
-							<Input
-								type="number"
-								value={String(getMonthlyServings(createDraft))}
-								onChange={(e) => {
-									const v = Math.max(1, safeNumber(e.target.value));
-									setCreateDraft((d) => ({ ...d, servings: { weekly: getWeeklyServings(d), monthly: v } }));
-								}}
-								min={1}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Protein grams (optional)</Label>
-							<Input
-								type="number"
-								value={createDraft.proteinGrams == null ? '' : String(createDraft.proteinGrams)}
-								onChange={(e) => {
-									const v = e.target.value;
-									setCreateDraft((d) => ({ ...d, proteinGrams: v === '' ? undefined : Math.max(0, safeNumber(v)) }));
-								}}
-								min={0}
-							/>
-						</div>
+								<FormField label="Serving size text (optional)" className="md:col-span-2">
+									<Input
+										value={String(createDraft.servingSizeText || '')}
+										onChange={(e) => setCreateDraft((d) => ({ ...d, servingSizeText: e.target.value }))}
+										placeholder="e.g. 150g (cooked)"
+									/>
+								</FormField>
+								<FormField label="Description (optional)" className="md:col-span-2">
+									<Textarea
+										value={String(createDraft.description || '')}
+										onChange={(e) => setCreateDraft((d) => ({ ...d, description: e.target.value }))}
+										placeholder="Shown in admin and (optionally) product detail contexts"
+										className="min-h-[120px]"
+									/>
+								</FormField>
+								<FormField label="Display order (optional)">
+									<Input
+										type="number"
+										value={createDraft.displayOrder == null ? '' : String(createDraft.displayOrder)}
+										onChange={(e) => {
+											const v = e.target.value;
+											setCreateDraft((d) => ({ ...d, displayOrder: v === '' ? undefined : safeNumber(v) }));
+										}}
+										min={0}
+									/>
+								</FormField>
 
-						<div className="space-y-2 sm:col-span-2">
-							<Label>Serving size text (optional)</Label>
-							<Input
-								value={String(createDraft.servingSizeText || '')}
-								onChange={(e) => setCreateDraft((d) => ({ ...d, servingSizeText: e.target.value }))}
-								placeholder="e.g. 150g (cooked)"
-							/>
-						</div>
-						<div className="space-y-2 sm:col-span-2">
-							<Label>Description (optional)</Label>
-							<Textarea
-								value={String(createDraft.description || '')}
-								onChange={(e) => setCreateDraft((d) => ({ ...d, description: e.target.value }))}
-								placeholder="Shown in admin and (optionally) product detail contexts"
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Display order (optional)</Label>
-							<Input
-								type="number"
-								value={createDraft.displayOrder == null ? '' : String(createDraft.displayOrder)}
-								onChange={(e) => {
-									const v = e.target.value;
-									setCreateDraft((d) => ({ ...d, displayOrder: v === '' ? undefined : safeNumber(v) }));
-								}}
-								min={0}
-							/>
-						</div>
+								<FormField label="Status" applyInputStyles={false} className="md:col-span-2">
+									<div className="flex h-11 items-center justify-between rounded-xl border px-4">
+										<span className="text-sm">Active</span>
+										<Switch
+											checked={Boolean(createDraft.isActive)}
+											onCheckedChange={(checked) => setCreateDraft((d) => ({ ...d, isActive: checked }))}
+										/>
+									</div>
+								</FormField>
 
-						<div className="flex items-center gap-2 sm:col-span-2">
-							<Switch
-								checked={Boolean(createDraft.isActive)}
-								onCheckedChange={(checked) => setCreateDraft((d) => ({ ...d, isActive: checked }))}
-							/>
-							<span className="text-sm">Active</span>
-						</div>
-
-							<div className="space-y-2 sm:col-span-2">
-							<Label>Images (optional, can add later)</Label>
-							<input
-								type="file"
-								multiple
-								accept="image/jpeg,image/png,image/webp"
-								disabled={creating}
-								onChange={(e) => setCreateUploadFiles(pickValidFiles(e.target.files))}
-							/>
-							<div className="text-xs text-muted-foreground">Uploads after create.</div>
-							<div className="space-y-1">
-								<Label className="mb-1 block">Alt text (optional)</Label>
-								<Input value={createUploadAlt} onChange={(e) => setCreateUploadAlt(e.target.value)} placeholder="Short description for accessibility" />
+								<FormField label="Images (optional, can add later)" hint="Uploads after create." applyInputStyles={false} className="md:col-span-2">
+									<input
+										type="file"
+										multiple
+										accept="image/jpeg,image/png,image/webp"
+										disabled={creating}
+										onChange={(e) => setCreateUploadFiles(pickValidFiles(e.target.files))}
+										className="block w-full text-sm"
+									/>
+								</FormField>
+								<FormField label="Alt text (optional)" className="md:col-span-2">
+									<Input value={createUploadAlt} onChange={(e) => setCreateUploadAlt(e.target.value)} placeholder="Short description for accessibility" />
+								</FormField>
 							</div>
-							</div>
 						</div>
-					</div>
-
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
-						<Button onClick={handleCreate} disabled={creating || !canSubmitDraft(createDraft)}>
-							{creating ? 'Creating…' : 'Create Add-on'}
-						</Button>
-					</DialogFooter>
+					</AdminFormLayout>
 				</DialogContent>
 			</Dialog>
 
@@ -809,238 +799,197 @@ export default function AdminAddons() {
 							setUploadPct(undefined);
 						}
 					}}>
-						<DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-							<DialogHeader>
-								<DialogTitle>Edit Add-on</DialogTitle>
-								<DialogDescription>Update details and upload a new image.</DialogDescription>
-							</DialogHeader>
-
-							<div className="flex-1 overflow-y-auto pr-1">
-								{!editItem ? (
-									<div className="py-8"><Skeleton className="h-32 w-full" /></div>
-								) : (
-									<form className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-									{/* Basic Info */}
-									<section className="space-y-4">
-										<div>
-											<h3 className="font-semibold text-oz-primary mb-2 text-base">Basic Info</h3>
-											<div className="space-y-3">
-												<div>
-													<Label className="mb-1 block">Name</Label>
-													<Input value={String(editDraft.name || '')} onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))} />
-												</div>
-												<div>
-													<Label className="mb-1 block">Category</Label>
-													<Select
-														value={String((editDraft as unknown as { categoryId?: string }).categoryId || '')}
-														onValueChange={(v) => {
-															const selected = categoryOptions.find((c) => c.id === v);
-															setEditDraft((d) => ({
-																...d,
-																categoryId: v,
-																category: selected?.slug || (d.category as AddonCategory),
-															}));
-														}}
-													>
-														<SelectTrigger><SelectValue /></SelectTrigger>
-														<SelectContent>
-															{categoriesLoading ? (
-																<SelectItem value="" disabled>Loading…</SelectItem>
-															) : categoryOptions.length === 0 ? (
-																<SelectItem value="" disabled>No categories found</SelectItem>
-															) : (
-																categoryOptions.map((c) => (
-																	<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-																))
-															)}
-														</SelectContent>
-													</Select>
-												</div>
-											</div>
-										</div>
-
-										{/* Nutrition & Pricing */}
-										<div>
-											<h3 className="font-semibold text-oz-primary mb-2 text-base">Nutrition & Pricing</h3>
-											<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-												<div>
-													<Label className="mb-1 block">Single price (INR)</Label>
-													<Input type="number" value={String(getSinglePrice(editDraft))} onChange={(e) => { const single = safeNumber(e.target.value); setEditDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0 }), single }, })); }} min={0} />
-												</div>
-												<div>
-													<Label className="mb-1 block">Weekly subscription price (optional)</Label>
-													<Input
-														type="number"
-														value={getWeeklyPrice(editDraft) == null ? '' : String(getWeeklyPrice(editDraft))}
-														onChange={(e) => {
-															const raw = e.target.value;
-															setEditDraft((d) => {
-																const base = { ...(d.pricing || { single: getSinglePrice(d) }) } as { single: number; weekly?: number; monthly?: number };
-																if (raw === '') {
-																	const { weekly: _weekly, ...rest } = base;
-																	return { ...d, pricing: rest };
-																}
-																return { ...d, pricing: { ...base, weekly: safeNumber(raw) } };
-															});
-														}}
-														min={0}
-													/>
-												</div>
-												<div>
-													<Label className="mb-1 block">Monthly price (optional)</Label>
-													<Input type="number" value={getMonthlyPrice(editDraft) == null ? '' : String(getMonthlyPrice(editDraft))} onChange={(e) => { const raw = e.target.value; setEditDraft((d) => { const base = { ...(d.pricing || { single: getSinglePrice(d) }) }; if (raw === '') { const { monthly: _monthly, ...rest } = base as { single: number; monthly?: number }; return { ...d, pricing: rest }; } return { ...d, pricing: { ...base, monthly: safeNumber(raw) } }; }); }} min={0} />
-												</div>
-												<div>
-													<Label className="mb-1 block">Weekly servings</Label>
-													<Input
-														type="number"
-														value={String(getWeeklyServings(editDraft))}
-														onChange={(e) => {
-															const v = Math.max(1, safeNumber(e.target.value));
-															setEditDraft((d) => ({ ...d, servings: { weekly: v, monthly: getMonthlyServings(d) } }));
-														}}
-														min={1}
-													/>
-												</div>
-												<div>
-													<Label className="mb-1 block">Monthly servings</Label>
-													<Input
-														type="number"
-														value={String(getMonthlyServings(editDraft))}
-														onChange={(e) => {
-															const v = Math.max(1, safeNumber(e.target.value));
-															setEditDraft((d) => ({ ...d, servings: { weekly: getWeeklyServings(d), monthly: v } }));
-														}}
-														min={1}
-													/>
-												</div>
-												<div>
-													<Label className="mb-1 block">Protein grams (optional)</Label>
-													<Input type="number" value={editDraft.proteinGrams == null ? '' : String(editDraft.proteinGrams)} onChange={(e) => { const v = e.target.value; setEditDraft((d) => ({ ...d, proteinGrams: v === '' ? undefined : Math.max(0, safeNumber(v)) })); }} min={0} />
-												</div>
-											</div>
-											<div className="space-y-2 mt-3">
-												<Label className="mb-1 block">Serving size text (optional)</Label>
-												<Input value={String(editDraft.servingSizeText || '')} onChange={(e) => setEditDraft((d) => ({ ...d, servingSizeText: e.target.value }))} placeholder="e.g. 150g (cooked)" />
-											</div>
-											<div className="space-y-2 mt-3">
-												<Label className="mb-1 block">Display order (optional)</Label>
-												<Input type="number" value={editDraft.displayOrder == null ? '' : String(editDraft.displayOrder)} onChange={(e) => { const v = e.target.value; setEditDraft((d) => ({ ...d, displayOrder: v === '' ? undefined : safeNumber(v) })); }} min={0} />
-											</div>
-											<div className="space-y-2 mt-3">
-												<Label className="mb-1 block">Description (optional)</Label>
-												<Textarea value={String(editDraft.description || '')} onChange={(e) => setEditDraft((d) => ({ ...d, description: e.target.value }))} placeholder="Shown in admin and (optionally) product detail contexts" />
-											</div>
-										</div>
-
-										{/* Status */}
-										<div>
-											<h3 className="font-semibold text-oz-primary mb-2 text-base">Status</h3>
-											<div className="flex items-center gap-2">
-												<Switch checked={Boolean(editDraft.isActive)} onCheckedChange={(v) => setEditDraft((d) => ({ ...d, isActive: v }))} />
-												<span className="text-sm">Active</span>
-											</div>
-										</div>
-									</section>
-
-									{/* Image Section */}
-									<section className="space-y-4">
-										<div>
-											<h3 className="font-semibold text-oz-primary mb-2 text-base">Images</h3>
-											<div className="grid grid-cols-2 gap-2">
-												{(editItem.images && editItem.images.length > 0 ? editItem.images : (editItem.image ? [editItem.image] : [])).map((img, idx) => (
-													<div key={img.publicId || idx} className="rounded-xl overflow-hidden border bg-muted">
-														<div className="relative">
-															<img src={img.url} alt={img.alt || editItem.name} className="w-full aspect-[16/9] object-cover" loading="lazy" />
-															{idx === 0 ? (
-																<div className="absolute top-2 left-2 rounded-full bg-black/60 text-white text-xs px-2 py-0.5">Primary</div>
-															) : null}
-														</div>
-														<div className="flex gap-2 p-2">
-															<Button
-																variant="outline"
-																size="sm"
-																disabled={imageActionBusy || uploading || saving || idx === 0}
-																onClick={async () => {
-																	if (!editItem) return;
-																	setImageActionBusy(true);
-																	try {
-																		const res = await adminAddonsService.makeImagePrimary(editItem.id, idx);
-																		setItems((prev) => prev.map((a) => (a.id === editItem.id ? { ...a, ...res.data } : a)));
-																		setEditItem(res.data);
-																	} catch {
-																		toast({ title: 'Error', description: 'Failed to set primary image.', variant: 'destructive' });
-																	} finally {
-																		setImageActionBusy(false);
-																	}
+						<DialogContent className="max-w-5xl p-0">
+							<AdminFormLayout
+								title="Edit Add-on"
+								description="Update details and upload a new image."
+								stickyActions
+								actions={
+									<>
+										<Button variant="outline" className="h-11 rounded-xl" onClick={() => setEditOpen(false)} disabled={saving || uploading}>
+											Close
+										</Button>
+										<Button className="h-11 rounded-xl" onClick={handleSave} disabled={!editItem || saving || uploading || !canSubmitDraft(editDraft)}>
+											{saving ? 'Saving…' : 'Save Changes'}
+										</Button>
+									</>
+								}
+							>
+								<div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+									{!editItem ? (
+										<Skeleton className="h-32 w-full rounded-xl" />
+									) : (
+										<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+											<div className="space-y-6">
+												<div className="rounded-xl border bg-white p-4 space-y-4">
+													<h3 className="text-sm font-semibold text-oz-primary">Details</h3>
+													<div className={ADMIN_FORM_GRID}>
+														<FormField label="Name" required className="md:col-span-2">
+															<Input value={String(editDraft.name || '')} onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))} />
+														</FormField>
+														<FormField label="Category" required applyInputStyles={false}>
+															<Select
+																value={String((editDraft as unknown as { categoryId?: string }).categoryId || '')}
+																onValueChange={(v) => {
+																	const selected = categoryOptions.find((c) => c.id === v);
+																	setEditDraft((d) => ({
+																		...d,
+																		categoryId: v,
+																		category: selected?.slug || (d.category as AddonCategory),
+																	}));
 																}}
 															>
-																Make primary
-															</Button>
-															<Button
-																variant="destructive"
-																size="sm"
-																disabled={imageActionBusy || uploading || saving}
-																onClick={async () => {
-																	if (!editItem) return;
-																	setImageActionBusy(true);
-																	try {
-																		const res = await adminAddonsService.deleteImageAtIndex(editItem.id, idx);
-																		setItems((prev) => prev.map((a) => (a.id === editItem.id ? { ...a, ...res.data } : a)));
-																		setEditItem(res.data);
-																	} catch {
-																		toast({ title: 'Error', description: 'Failed to delete image.', variant: 'destructive' });
-																	} finally {
-																		setImageActionBusy(false);
-																	}
-																}}
-															>
-																Delete
-															</Button>
-														</div>
+																<SelectTrigger className="h-11 rounded-xl px-4"><SelectValue /></SelectTrigger>
+																<SelectContent>
+																	{categoriesLoading ? (
+																		<SelectItem value="" disabled>Loading…</SelectItem>
+																	) : categoryOptions.length === 0 ? (
+																		<SelectItem value="" disabled>No categories found</SelectItem>
+																	) : (
+																		categoryOptions.map((c) => (
+																			<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+																		))
+																	)}
+																</SelectContent>
+															</Select>
+														</FormField>
+														<FormField label="Serving size text (optional)" className="md:col-span-2">
+															<Input value={String(editDraft.servingSizeText || '')} onChange={(e) => setEditDraft((d) => ({ ...d, servingSizeText: e.target.value }))} placeholder="e.g. 150g (cooked)" />
+														</FormField>
+														<FormField label="Display order (optional)">
+															<Input type="number" value={editDraft.displayOrder == null ? '' : String(editDraft.displayOrder)} onChange={(e) => { const v = e.target.value; setEditDraft((d) => ({ ...d, displayOrder: v === '' ? undefined : safeNumber(v) })); }} min={0} />
+														</FormField>
+														<FormField label="Description (optional)" className="md:col-span-2">
+															<Textarea value={String(editDraft.description || '')} onChange={(e) => setEditDraft((d) => ({ ...d, description: e.target.value }))} placeholder="Shown in admin and (optionally) product detail contexts" className="min-h-[120px]" />
+														</FormField>
 													</div>
-												))}
-											</div>
-										</div>
-										<div>
-											<h3 className="font-semibold text-oz-primary mb-2 text-base">Upload images</h3>
-											<ImageDropzone value={uploadFile} onChange={setUploadFile} disabled={uploading || saving} progressPct={uploadPct} />
-											<div className="space-y-1 mt-2">
-												<Label className="mb-1 block">Image alt text (optional)</Label>
-												<Input value={uploadAlt} onChange={(e) => setUploadAlt(e.target.value)} placeholder="Short description for accessibility" />
-											</div>
-											<div className="flex flex-wrap gap-2 mt-2">
-												<Button variant="outline" disabled={!uploadFile || uploading || saving} onClick={handleUpload}>
-													{uploading ? 'Uploading…' : 'Replace primary'}
-												</Button>
-												<div className="flex-1" />
-											</div>
-											<div className="mt-2 space-y-2">
-												<Label className="mb-1 block">Add multiple images</Label>
-												<input
-													type="file"
-													multiple
-													accept="image/jpeg,image/png,image/webp"
-													disabled={uploading || saving}
-													onChange={(e) => setUploadFiles(pickValidFiles(e.target.files))}
-												/>
-												<div className="text-xs text-muted-foreground">Appends to the end. Use “Make primary” to pick the cover.</div>
-												<Button variant="outline" disabled={uploadFiles.length === 0 || uploading || saving} onClick={handleUploadImages}>
-													{uploading ? 'Uploading…' : `Upload ${uploadFiles.length || ''} image(s)`}
-												</Button>
-											</div>
-										</div>
-									</section>
-								</form>
-							)}
-						</div>
+												</div>
 
-							<DialogFooter>
-								<Button variant="outline" onClick={() => setEditOpen(false)} disabled={saving || uploading}>Close</Button>
-								<Button onClick={handleSave} disabled={!editItem || saving || uploading || !canSubmitDraft(editDraft)}>
-									{saving ? 'Saving…' : 'Save Changes'}
-								</Button>
-							</DialogFooter>
+												<div className="rounded-xl border bg-white p-4 space-y-4">
+													<h3 className="text-sm font-semibold text-oz-primary">Pricing & Nutrition</h3>
+													<div className={ADMIN_FORM_GRID}>
+														<FormField label="Single price (INR)">
+															<Input type="number" value={String(getSinglePrice(editDraft))} onChange={(e) => { const single = safeNumber(e.target.value); setEditDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0 }), single }, })); }} min={0} />
+														</FormField>
+														<FormField label="Weekly subscription price (optional)">
+															<Input type="number" value={getWeeklyPrice(editDraft) == null ? '' : String(getWeeklyPrice(editDraft))} onChange={(e) => { const raw = e.target.value; setEditDraft((d) => { const base = { ...(d.pricing || { single: getSinglePrice(d) }) } as { single: number; weekly?: number; monthly?: number }; if (raw === '') { const { weekly: _weekly, ...rest } = base; return { ...d, pricing: rest }; } return { ...d, pricing: { ...base, weekly: safeNumber(raw) } }; }); }} min={0} />
+														</FormField>
+														<FormField label="Monthly price (optional)">
+															<Input type="number" value={getMonthlyPrice(editDraft) == null ? '' : String(getMonthlyPrice(editDraft))} onChange={(e) => { const raw = e.target.value; setEditDraft((d) => { const base = { ...(d.pricing || { single: getSinglePrice(d) }) }; if (raw === '') { const { monthly: _monthly, ...rest } = base as { single: number; monthly?: number }; return { ...d, pricing: rest }; } return { ...d, pricing: { ...base, monthly: safeNumber(raw) } }; }); }} min={0} />
+														</FormField>
+														<FormField label="Weekly servings">
+															<Input type="number" value={String(getWeeklyServings(editDraft))} onChange={(e) => { const v = Math.max(1, safeNumber(e.target.value)); setEditDraft((d) => ({ ...d, servings: { weekly: v, monthly: getMonthlyServings(d) } })); }} min={1} />
+														</FormField>
+														<FormField label="Monthly servings">
+															<Input type="number" value={String(getMonthlyServings(editDraft))} onChange={(e) => { const v = Math.max(1, safeNumber(e.target.value)); setEditDraft((d) => ({ ...d, servings: { weekly: getWeeklyServings(d), monthly: v } })); }} min={1} />
+														</FormField>
+														<FormField label="Protein grams (optional)">
+															<Input type="number" value={editDraft.proteinGrams == null ? '' : String(editDraft.proteinGrams)} onChange={(e) => { const v = e.target.value; setEditDraft((d) => ({ ...d, proteinGrams: v === '' ? undefined : Math.max(0, safeNumber(v)) })); }} min={0} />
+														</FormField>
+													</div>
+												</div>
+
+												<div className="rounded-xl border bg-white p-4">
+													<FormField label="Status" applyInputStyles={false}>
+														<div className="flex h-11 items-center justify-between rounded-xl border px-4">
+															<span className="text-sm">Active</span>
+															<Switch checked={Boolean(editDraft.isActive)} onCheckedChange={(v) => setEditDraft((d) => ({ ...d, isActive: v }))} />
+														</div>
+													</FormField>
+												</div>
+											</div>
+
+											<div className="rounded-xl border bg-white p-4 space-y-4">
+												<h3 className="text-sm font-semibold text-oz-primary">Images</h3>
+												<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+													{(editItem.images && editItem.images.length > 0 ? editItem.images : (editItem.image ? [editItem.image] : [])).map((img, idx) => (
+														<div key={img.publicId || idx} className="rounded-xl overflow-hidden border bg-muted">
+															<div className="relative">
+																<img src={img.url} alt={img.alt || editItem.name} className="w-full aspect-[16/9] object-cover" loading="lazy" />
+																{idx === 0 ? (
+																	<div className="absolute top-2 left-2 rounded-full bg-black/60 text-white text-xs px-2 py-0.5">Primary</div>
+																) : null}
+															</div>
+															<div className="flex gap-2 p-2">
+																<Button
+																	variant="outline"
+																	className="h-9 rounded-lg"
+																	disabled={imageActionBusy || uploading || saving || idx === 0}
+																	onClick={async () => {
+																		if (!editItem) return;
+																		setImageActionBusy(true);
+																		try {
+																			const res = await adminAddonsService.makeImagePrimary(editItem.id, idx);
+																			setItems((prev) => prev.map((a) => (a.id === editItem.id ? { ...a, ...res.data } : a)));
+																			setEditItem(res.data);
+																		} catch {
+																			toast({ title: 'Error', description: 'Failed to set primary image.', variant: 'destructive' });
+																		} finally {
+																			setImageActionBusy(false);
+																		}
+																	}}
+																>
+																	Make primary
+																</Button>
+																<Button
+																	variant="destructive"
+																	className="h-9 rounded-lg"
+																	disabled={imageActionBusy || uploading || saving}
+																	onClick={async () => {
+																		if (!editItem) return;
+																		setImageActionBusy(true);
+																		try {
+																			const res = await adminAddonsService.deleteImageAtIndex(editItem.id, idx);
+																			setItems((prev) => prev.map((a) => (a.id === editItem.id ? { ...a, ...res.data } : a)));
+																			setEditItem(res.data);
+																		} catch {
+																			toast({ title: 'Error', description: 'Failed to delete image.', variant: 'destructive' });
+																		} finally {
+																			setImageActionBusy(false);
+																		}
+																	}}
+																>
+																	Delete
+																</Button>
+															</div>
+														</div>
+													))}
+												</div>
+
+												<div className="rounded-xl border bg-muted/20 p-4 space-y-4">
+													<FormField label="Upload images" applyInputStyles={false}>
+														<ImageDropzone value={uploadFile} onChange={setUploadFile} disabled={uploading || saving} progressPct={uploadPct} />
+													</FormField>
+													<FormField label="Image alt text (optional)">
+														<Input value={uploadAlt} onChange={(e) => setUploadAlt(e.target.value)} placeholder="Short description for accessibility" />
+													</FormField>
+													<div className="flex flex-wrap gap-2">
+														<Button variant="outline" className="h-11 rounded-xl" disabled={!uploadFile || uploading || saving} onClick={handleUpload}>
+															{uploading ? 'Uploading…' : 'Replace primary'}
+														</Button>
+													</div>
+													<div className="space-y-2">
+														<FormField label="Add multiple images" applyInputStyles={false}>
+															<input
+																type="file"
+																multiple
+																accept="image/jpeg,image/png,image/webp"
+																disabled={uploading || saving}
+																onChange={(e) => setUploadFiles(pickValidFiles(e.target.files))}
+																className="block w-full text-sm"
+															/>
+														</FormField>
+														<div className="text-xs text-muted-foreground">Appends to the end. Use “Make primary” to pick the cover.</div>
+														<Button variant="outline" className="h-11 rounded-xl" disabled={uploadFiles.length === 0 || uploading || saving} onClick={handleUploadImages}>
+															{uploading ? 'Uploading…' : `Upload ${uploadFiles.length || ''} image(s)`}
+														</Button>
+													</div>
+												</div>
+											</div>
+										</div>
+									)}
+								</div>
+							</AdminFormLayout>
 						</DialogContent>
 					</Dialog>
 		</div>

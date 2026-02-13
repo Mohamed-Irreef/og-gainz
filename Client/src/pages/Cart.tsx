@@ -10,10 +10,12 @@ import { QuantityStepper } from "@/components/shared/QuantityStepper";
 import { useCart } from "@/context/CartContext";
 import { useUser } from "@/context/UserContext";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { useSafeBack } from '@/hooks/use-safe-back';
 
 const Cart = () => {
 	const navigate = useNavigate();
 	const { toast } = useToast();
+	const handleBack = useSafeBack('/meal-packs');
 	const { state, quote, isQuoting, quoteError, removeItem, updateQuantity, setCreditsToApply, setDeliveryLocation, clearCart } = useCart();
 	const { user, isAuthenticated } = useUser();
 
@@ -112,13 +114,14 @@ const Cart = () => {
 		<div className="animate-fade-in">
 			<div className="bg-oz-neutral/30 border-b border-oz-neutral">
 				<div className="container mx-auto px-4 py-4">
-					<Link
-						to="/meal-packs"
+					<button
+						type="button"
+						onClick={handleBack}
 						className="inline-flex items-center text-sm text-muted-foreground hover:text-oz-primary transition-colors"
 					>
 						<ArrowLeft className="mr-2 h-4 w-4" />
 						Continue Shopping
-					</Link>
+					</button>
 				</div>
 			</div>
 

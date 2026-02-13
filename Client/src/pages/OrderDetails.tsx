@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import type { CartOrderDetails } from '@/types/cartPhase4';
+import { useSafeBack } from '@/hooks/use-safe-back';
 
 const CUTOFF_HOUR_LOCAL = 19; // 7 PM
 
@@ -52,6 +53,7 @@ export default function OrderDetails() {
 	const navigate = useNavigate();
 	const { toast } = useToast();
 	const { state, quote, isQuoting, quoteError, setOrderDetails } = useCart();
+	const handleBack = useSafeBack('/cart');
 
 	useEffect(() => {
 		if (!state.items.length) {
@@ -133,10 +135,10 @@ export default function OrderDetails() {
 		<div className="animate-fade-in">
 			<div className="bg-oz-neutral/30 border-b border-oz-neutral">
 				<div className="container mx-auto px-4 py-4">
-					<Link to="/cart" className="inline-flex items-center text-sm text-muted-foreground hover:text-oz-primary transition-colors">
+					<button type="button" onClick={handleBack} className="inline-flex items-center text-sm text-muted-foreground hover:text-oz-primary transition-colors">
 						<ArrowLeft className="mr-2 h-4 w-4" />
 						Back to Cart
-					</Link>
+					</button>
 				</div>
 			</div>
 
@@ -250,7 +252,7 @@ export default function OrderDetails() {
 				<Separator className="my-8" />
 
 				<div className="flex justify-end gap-3">
-					<Button variant="outline" onClick={() => navigate('/cart')}>Back</Button>
+					<Button variant="outline" onClick={handleBack}>Back</Button>
 					<Button
 						disabled={!canProceed}
 						className="bg-oz-accent hover:bg-oz-accent/90"

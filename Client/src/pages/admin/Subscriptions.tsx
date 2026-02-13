@@ -149,6 +149,12 @@ const summarize = (s: AdminSubscription) => {
 export default function Subscriptions() {
 	const { toast } = useToast();
 	const navigate = useNavigate();
+	const pauseSkipDisabled = true;
+	const disabledActionClass = pauseSkipDisabled ? 'opacity-60 cursor-not-allowed' : '';
+	const showComingSoon = () => {
+		// TODO: Re-enable pause/skip workflows when the backend rollout is ready.
+		toast({ title: 'This feature will be coming soon.' });
+	};
 
 	const [requestsLoading, setRequestsLoading] = useState(true);
 	const [requests, setRequests] = useState<PauseSkipRequest[]>([]);
@@ -237,6 +243,10 @@ export default function Subscriptions() {
 	}, [requests, deliveryById]);
 
 	const onDecideRequest = async (r: PauseSkipRequest, status: 'APPROVED' | 'DECLINED') => {
+		if (pauseSkipDisabled) {
+			showComingSoon();
+			return;
+		}
 		setDecidingRequestId(r.id);
 		try {
 			await adminPauseSkipService.decideRequest(r.id, { status });
@@ -254,6 +264,10 @@ export default function Subscriptions() {
 	};
 
 	const onToggle = async (s: AdminSubscription) => {
+		if (pauseSkipDisabled) {
+			showComingSoon();
+			return;
+		}
 		if (s.kind === 'mealPack') return;
 		const nextStatus: AdminSubscriptionStatus = s.status === 'active' ? 'paused' : 'active';
 		setSavingId(s.id);
@@ -350,7 +364,12 @@ export default function Subscriptions() {
 											<TableCell className="text-right">
 												<div className="flex justify-end gap-2">
 													{canApproveSkip ? (
-														<Button size="sm" disabled={isDeciding} onClick={() => onDecideRequest(r, 'APPROVED')}>
+														<Button
+															size="sm"
+															disabled={pauseSkipDisabled ? false : isDeciding}
+															className={disabledActionClass}
+															onClick={() => onDecideRequest(r, 'APPROVED')}
+														>
 															Approve
 														</Button>
 													) : (
@@ -358,7 +377,7 @@ export default function Subscriptions() {
 															<Tooltip>
 																<TooltipTrigger asChild>
 																	<span>
-																		<Button size="sm" disabled>
+																		<Button size="sm" className={disabledActionClass} onClick={showComingSoon}>
 																			Approve
 																		</Button>
 																	</span>
@@ -369,7 +388,13 @@ export default function Subscriptions() {
 															</Tooltip>
 														</TooltipProvider>
 													)}
-													<Button size="sm" variant="destructive" disabled={isDeciding} onClick={() => onDecideRequest(r, 'DECLINED')}>
+													<Button
+														size="sm"
+														variant="destructive"
+														disabled={pauseSkipDisabled ? false : isDeciding}
+														className={disabledActionClass}
+														onClick={() => onDecideRequest(r, 'DECLINED')}
+													>
 														Decline
 													</Button>
 												</div>
@@ -491,29 +516,40 @@ export default function Subscriptions() {
 														</Button>
 													) : null}
 													{s.kind !== 'mealPack' ? (
-														<AlertDialog>
-															<AlertDialogTrigger asChild>
-																<Button size="sm" variant={nextStatus === 'paused' ? 'destructive' : 'secondary'} disabled={isSaving}>
-																	{nextStatus === 'paused' ? 'Pause' : 'Resume'}
-																</Button>
-															</AlertDialogTrigger>
-															<AlertDialogContent>
-																<AlertDialogHeader>
-																	<AlertDialogTitle>
-																		{nextStatus === 'paused' ? 'Pause subscription?' : 'Resume subscription?'}
-																	</AlertDialogTitle>
-																	<AlertDialogDescription>
-																		This changes operational status only. It does not refund past orders.
-																	</AlertDialogDescription>
-																</AlertDialogHeader>
-																<AlertDialogFooter>
-																	<AlertDialogCancel disabled={isSaving}>Cancel</AlertDialogCancel>
-																	<AlertDialogAction onClick={() => onToggle(s)} disabled={isSaving}>
-																		Confirm
-																	</AlertDialogAction>
-																</AlertDialogFooter>
-															</AlertDialogContent>
-														</AlertDialog>
+														pauseSkipDisabled ? (
+															<Button
+																size="sm"
+																variant={nextStatus === 'paused' ? 'destructive' : 'secondary'}
+																className={disabledActionClass}
+																onClick={showComingSoon}
+															>
+																{nextStatus === 'paused' ? 'Pause' : 'Resume'}
+															</Button>
+														) : (
+															<AlertDialog>
+																<AlertDialogTrigger asChild>
+																	<Button size="sm" variant={nextStatus === 'paused' ? 'destructive' : 'secondary'} disabled={isSaving}>
+																		{nextStatus === 'paused' ? 'Pause' : 'Resume'}
+																	</Button>
+																</AlertDialogTrigger>
+																<AlertDialogContent>
+																	<AlertDialogHeader>
+																		<AlertDialogTitle>
+																			{nextStatus === 'paused' ? 'Pause subscription?' : 'Resume subscription?'}
+																		</AlertDialogTitle>
+																		<AlertDialogDescription>
+																			This changes operational status only. It does not refund past orders.
+																		</AlertDialogDescription>
+																	</AlertDialogHeader>
+																	<AlertDialogFooter>
+																		<AlertDialogCancel disabled={isSaving}>Cancel</AlertDialogCancel>
+																		<AlertDialogAction onClick={() => onToggle(s)} disabled={isSaving}>
+																			Confirm
+																		</AlertDialogAction>
+																	</AlertDialogFooter>
+																</AlertDialogContent>
+															</AlertDialog>
+														)
 													) : null}
 												</div>
 											</TableCell>

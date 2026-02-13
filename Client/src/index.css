@@ -244,6 +244,80 @@
   }
 }
 
+@media (max-width: 767px) {
+  .oz-dashboard,
+  .oz-admin {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .oz-dashboard h1,
+  .oz-admin h1 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+  }
+
+  .oz-dashboard h2,
+  .oz-admin h2 {
+    font-size: 1.125rem;
+    line-height: 1.4;
+  }
+
+  .oz-dashboard h3,
+  .oz-admin h3 {
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .oz-dashboard h4,
+  .oz-admin h4 {
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .oz-dashboard button,
+  .oz-admin button,
+  .oz-dashboard [role="button"],
+  .oz-admin [role="button"] {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .oz-dashboard input,
+  .oz-admin input,
+  .oz-dashboard select,
+  .oz-admin select,
+  .oz-dashboard textarea,
+  .oz-admin textarea {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .oz-dashboard label,
+  .oz-admin label,
+  .oz-dashboard .form-label,
+  .oz-admin .form-label {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
+  .oz-dashboard table,
+  .oz-admin table {
+    font-size: 0.875rem;
+  }
+
+  .oz-dashboard .tabs-list,
+  .oz-admin .tabs-list,
+  .oz-dashboard .tab,
+  .oz-admin .tab,
+  .oz-dashboard .summary-bar,
+  .oz-admin .summary-bar,
+  .oz-dashboard .card-title,
+  .oz-admin .card-title {
+    font-size: 0.875rem;
+  }
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 8px;

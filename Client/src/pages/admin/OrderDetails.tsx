@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
 
 import { useToast } from '@/hooks/use-toast';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { adminOrdersService, type AdminOrder, type AdminOrderAcceptanceStatus } from '@/services/adminOrdersService';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { statusBadgeClass as globalStatusBadgeClass, statusLabel } from '@/utils/statusUi';
@@ -68,6 +69,7 @@ export default function OrderDetails() {
 	const { orderId } = useParams();
 	const navigate = useNavigate();
 	const { toast } = useToast();
+	const handleBack = useSafeBack('/admin/orders');
 
 	const [order, setOrder] = useState<AdminOrder | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -183,9 +185,7 @@ export default function OrderDetails() {
 					<AlertTitle>{notFound ? 'Order not found' : forbidden ? 'Access denied' : 'Error'}</AlertTitle>
 					<AlertDescription>{error}</AlertDescription>
 				</Alert>
-				<Button asChild variant="outline">
-					<Link to="/admin/orders">Back to Orders</Link>
-				</Button>
+				<Button variant="outline" onClick={handleBack}>Back to Orders</Button>
 			</div>
 		);
 	}
@@ -228,9 +228,7 @@ export default function OrderDetails() {
 					<div className="text-2xl font-semibold text-oz-primary">Order {id ? id.slice(-6) : ''}</div>
 					<div className="text-sm text-muted-foreground">Full ID: <span className="font-mono">{id}</span></div>
 				</div>
-				<Button asChild variant="outline">
-					<Link to="/admin/orders">Back</Link>
-				</Button>
+				<Button variant="outline" onClick={handleBack}>Back</Button>
 			</div>
 
 			<div className="grid gap-4 lg:grid-cols-3">

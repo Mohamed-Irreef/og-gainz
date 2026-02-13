@@ -134,7 +134,7 @@ export function AdminLayout() {
   };
 
   return (
-		<div className="h-screen flex bg-oz-neutral/20 overflow-hidden">
+    <div className="h-screen flex bg-oz-neutral/20 overflow-hidden oz-admin">
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div

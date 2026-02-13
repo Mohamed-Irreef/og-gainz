@@ -131,6 +131,12 @@ const isWithinInclusiveISODateRange = (dateISO: string, startISO?: string, endIS
 
 export default function Deliveries() {
 	const { toast } = useToast();
+	const pauseSkipDisabled = true;
+	const disabledActionClass = pauseSkipDisabled ? 'opacity-60 cursor-not-allowed' : '';
+	const showComingSoon = () => {
+		// TODO: Re-enable pause/skip workflows when the backend rollout is ready.
+		toast({ title: 'This feature will be coming soon.' });
+	};
 
 	const [selectedDate, setSelectedDate] = useState(() => toLocalISODate(new Date()));
 	const [loading, setLoading] = useState(true);
@@ -247,6 +253,10 @@ export default function Deliveries() {
 	}, [requests]);
 
 	const openSkipDialog = (d: MyDelivery) => {
+		if (pauseSkipDisabled) {
+			showComingSoon();
+			return;
+		}
 		setSkipDelivery(d);
 		setSkipReason('');
 		setSkipDialogOpen(true);
@@ -305,6 +315,10 @@ export default function Deliveries() {
 	};
 
 	const onSubmitSkip = async () => {
+		if (pauseSkipDisabled) {
+			showComingSoon();
+			return;
+		}
 		const d = skipDelivery;
 		if (!d) return;
 		const id = safeString(d._id || d.id);
@@ -339,6 +353,10 @@ export default function Deliveries() {
 	};
 
 	const withdrawSkipRequest = async (requestId: string) => {
+		if (pauseSkipDisabled) {
+			showComingSoon();
+			return;
+		}
 		const rid = safeString(requestId);
 		if (!rid) return;
 		setWithdrawingRequestId(rid);
@@ -501,20 +519,20 @@ export default function Deliveries() {
 											</Button>
 															{!isToday ? null : pendingSkip ? (
 												<>
-													<Button size="sm" variant="outline" disabled>
+																	<Button size="sm" variant="outline" className={disabledActionClass} onClick={showComingSoon}>
 														Skip Requested
 													</Button>
 													<Button
 														size="sm"
 														variant="outline"
-														disabled={withdrawingRequestId === pendingSkip.id}
-														onClick={() => withdrawSkipRequest(pendingSkip.id)}
+																		className={disabledActionClass}
+																		onClick={showComingSoon}
 													>
 														Withdraw Skip
 													</Button>
 												</>
 											) : skipEligibility.ok ? (
-												<Button size="sm" onClick={() => openSkipDialog(d)}>
+																<Button size="sm" className={disabledActionClass} onClick={() => openSkipDialog(d)}>
 													Request Skip
 												</Button>
 											) : (

@@ -17,6 +17,7 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { useCart } from '@/context/CartContext';
 
 
@@ -221,6 +222,7 @@ const AddOnCard = ({
 
 const AddOns = () => {
 	const navigate = useNavigate();
+	const handleBack = useSafeBack('/meal-packs');
 	const { toast } = useToast();
 	const { addItem, state, itemCount } = useCart();
 	const [isTabPending, startTabTransition] = useTransition();
@@ -368,10 +370,10 @@ const AddOns = () => {
 				
 				{/* Content */}
 				<div className="container mx-auto px-4 relative z-10">
-					<Link to="/meal-packs" className="inline-flex items-center text-white/90 hover:text-white text-sm font-medium transition-colors">
+					<button type="button" onClick={handleBack} className="inline-flex items-center text-white/90 hover:text-white text-sm font-medium transition-colors">
 						<ArrowLeft className="mr-2 h-4 w-4" />
 						Back to Meals
-					</Link>
+					</button>
 					<div className="max-w-3xl mx-auto text-center mt-6">
 						<h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3">Add-ons</h1>
 						<p className="text-lg text-white/90 max-w-2xl mx-auto mb-0">

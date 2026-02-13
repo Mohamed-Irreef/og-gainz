@@ -49,6 +49,8 @@ export type BuildYourOwnConfig = {
 	id: string;
 	minimumWeeklyOrderAmount: number;
 	minimumMonthlyOrderAmount: number;
+	maximumWeeklyOrderAmount?: number;
+	maximumMonthlyOrderAmount?: number;
 };
 
 export type BuildYourOwnQuote = {

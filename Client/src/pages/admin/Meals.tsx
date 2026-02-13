@@ -55,6 +55,7 @@ import { adminMealTypesService } from '@/services/adminMealTypesService';
 import { adminIncludedItemsService } from '@/services/adminIncludedItemsService';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { ImageDropzone } from '@/components/shared/ImageDropzone';
+import { ADMIN_FORM_CONTAINER } from '@/components/admin';
 import type {
 	Meal,
 	MealType,
@@ -807,7 +808,7 @@ function AdminMeals() {
 
 						{/* Content */}
 						<ScrollArea className="flex-1">
-							<div className="p-8">
+							<div className={`p-8 ${ADMIN_FORM_CONTAINER}`}>
 								<div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-8">
 									{/* Left Column - Form Fields */}
 									<div className="space-y-8">
@@ -1422,7 +1423,7 @@ function AdminMeals() {
 						<DialogDescription>Update details and upload a new image.</DialogDescription>
 					</DialogHeader>
 
-					<ScrollArea className="max-h-[70vh] pr-4">
+					<ScrollArea className={`max-h-[70vh] pr-4 ${ADMIN_FORM_CONTAINER}`}>
 						{!editItem ? (
 							<div className="py-8"><Skeleton className="h-32 w-full" /></div>
 						) : (

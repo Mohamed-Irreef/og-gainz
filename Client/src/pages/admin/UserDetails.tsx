@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/table';
 
 import { useToast } from '@/hooks/use-toast';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import {
 	adminUsersService,
 	type AdminUserDeliveriesSummary,
@@ -53,6 +54,13 @@ export default function UserDetails() {
 	const { toast } = useToast();
 	const { userId } = useParams();
 	const resolvedId = safeString(userId);
+	const handleBack = useSafeBack('/admin/users');
+	const pauseSkipDisabled = true;
+	const disabledActionClass = pauseSkipDisabled ? 'opacity-60 cursor-not-allowed' : '';
+	const showComingSoon = () => {
+		// TODO: Re-enable pause/skip workflows when the backend rollout is ready.
+		toast({ title: 'This feature will be coming soon.' });
+	};
 
 	const [profile, setProfile] = useState<AdminUserDetail | null>(null);
 	const [subs, setSubs] = useState<AdminUserSubscription[]>([]);
@@ -128,6 +136,10 @@ export default function UserDetails() {
 	};
 
 	const onPauseAll = async () => {
+		if (pauseSkipDisabled) {
+			showComingSoon();
+			return;
+		}
 		if (!profile?.userId) return;
 		setActionLoading('pause');
 		try {
@@ -142,6 +154,10 @@ export default function UserDetails() {
 	};
 
 	const onResumeAll = async () => {
+		if (pauseSkipDisabled) {
+			showComingSoon();
+			return;
+		}
 		if (!profile?.userId) return;
 		setActionLoading('resume');
 		try {
@@ -180,7 +196,7 @@ export default function UserDetails() {
 		<div className="space-y-6">
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div className="flex items-center gap-3">
-					<Button variant="outline" size="sm" onClick={() => navigate('/admin/users')}>
+					<Button variant="outline" size="sm" onClick={handleBack}>
 						<ArrowLeft className="h-4 w-4 mr-2" />
 						Back
 					</Button>
@@ -216,43 +232,57 @@ export default function UserDetails() {
 						</AlertDialogContent>
 					</AlertDialog>
 
-					<AlertDialog>
-						<AlertDialogTrigger asChild>
-							<Button variant="outline" disabled={actionLoading != null}>
-								<Pause className="h-4 w-4 mr-2" />
-								Pause All Subs
-							</Button>
-						</AlertDialogTrigger>
-						<AlertDialogContent>
-							<AlertDialogHeader>
-								<AlertDialogTitle>Pause all subscriptions?</AlertDialogTitle>
-								<AlertDialogDescription>This sets all current subscriptions to paused.</AlertDialogDescription>
-							</AlertDialogHeader>
-							<AlertDialogFooter>
-								<AlertDialogCancel>Cancel</AlertDialogCancel>
-								<AlertDialogAction onClick={onPauseAll}>Confirm</AlertDialogAction>
-							</AlertDialogFooter>
-						</AlertDialogContent>
-					</AlertDialog>
+					{pauseSkipDisabled ? (
+						<Button variant="outline" className={disabledActionClass} onClick={showComingSoon}>
+							<Pause className="h-4 w-4 mr-2" />
+							Pause All Subs
+						</Button>
+					) : (
+						<AlertDialog>
+							<AlertDialogTrigger asChild>
+								<Button variant="outline" disabled={actionLoading != null}>
+									<Pause className="h-4 w-4 mr-2" />
+									Pause All Subs
+								</Button>
+							</AlertDialogTrigger>
+							<AlertDialogContent>
+								<AlertDialogHeader>
+									<AlertDialogTitle>Pause all subscriptions?</AlertDialogTitle>
+									<AlertDialogDescription>This sets all current subscriptions to paused.</AlertDialogDescription>
+								</AlertDialogHeader>
+								<AlertDialogFooter>
+									<AlertDialogCancel>Cancel</AlertDialogCancel>
+									<AlertDialogAction onClick={onPauseAll}>Confirm</AlertDialogAction>
+								</AlertDialogFooter>
+							</AlertDialogContent>
+						</AlertDialog>
+					)}
 
-					<AlertDialog>
-						<AlertDialogTrigger asChild>
-							<Button variant="outline" disabled={actionLoading != null}>
-								<Play className="h-4 w-4 mr-2" />
-								Resume All Subs
-							</Button>
-						</AlertDialogTrigger>
-						<AlertDialogContent>
-							<AlertDialogHeader>
-								<AlertDialogTitle>Resume all subscriptions?</AlertDialogTitle>
-								<AlertDialogDescription>This sets all paused subscriptions back to active.</AlertDialogDescription>
-							</AlertDialogHeader>
-							<AlertDialogFooter>
-								<AlertDialogCancel>Cancel</AlertDialogCancel>
-								<AlertDialogAction onClick={onResumeAll}>Confirm</AlertDialogAction>
-							</AlertDialogFooter>
-						</AlertDialogContent>
-					</AlertDialog>
+					{pauseSkipDisabled ? (
+						<Button variant="outline" className={disabledActionClass} onClick={showComingSoon}>
+							<Play className="h-4 w-4 mr-2" />
+							Resume All Subs
+						</Button>
+					) : (
+						<AlertDialog>
+							<AlertDialogTrigger asChild>
+								<Button variant="outline" disabled={actionLoading != null}>
+									<Play className="h-4 w-4 mr-2" />
+									Resume All Subs
+								</Button>
+							</AlertDialogTrigger>
+							<AlertDialogContent>
+								<AlertDialogHeader>
+									<AlertDialogTitle>Resume all subscriptions?</AlertDialogTitle>
+									<AlertDialogDescription>This sets all paused subscriptions back to active.</AlertDialogDescription>
+								</AlertDialogHeader>
+								<AlertDialogFooter>
+									<AlertDialogCancel>Cancel</AlertDialogCancel>
+									<AlertDialogAction onClick={onResumeAll}>Confirm</AlertDialogAction>
+								</AlertDialogFooter>
+							</AlertDialogContent>
+						</AlertDialog>
+					)}
 				</div>
 			</div>
 

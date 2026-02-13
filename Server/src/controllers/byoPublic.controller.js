@@ -29,7 +29,12 @@ const parsePositiveInt = (value, fieldName) => {
 const getConfig = async () => {
 	let cfg = await BuildYourOwnConfig.findOne({}).lean();
 	if (!cfg) {
-		cfg = await BuildYourOwnConfig.create({ minimumWeeklyOrderAmount: 0, minimumMonthlyOrderAmount: 0 });
+		cfg = await BuildYourOwnConfig.create({
+			minimumWeeklyOrderAmount: 0,
+			minimumMonthlyOrderAmount: 0,
+			maximumWeeklyOrderAmount: 0,
+			maximumMonthlyOrderAmount: 0,
+		});
 		cfg = cfg.toObject({ versionKey: false });
 	}
 	return cfg;
@@ -105,6 +110,8 @@ const getByoConfig = async (req, res, next) => {
 				id: String(cfg._id),
 				minimumWeeklyOrderAmount: Number(cfg.minimumWeeklyOrderAmount || 0),
 				minimumMonthlyOrderAmount: Number(cfg.minimumMonthlyOrderAmount || 0),
+				maximumWeeklyOrderAmount: Number(cfg.maximumWeeklyOrderAmount || 0),
+				maximumMonthlyOrderAmount: Number(cfg.maximumMonthlyOrderAmount || 0),
 			},
 		});
 	} catch (err) {
@@ -223,6 +230,12 @@ const createByoSubscription = async (req, res, next) => {
 		const minimumRequired = mode === 'weekly' ? Number(cfg.minimumWeeklyOrderAmount || 0) : Number(cfg.minimumMonthlyOrderAmount || 0);
 		if (quote.total < minimumRequired) {
 			const err = new Error(`Minimum ${mode} order is ${minimumRequired}`);
+			err.statusCode = 400;
+			throw err;
+		}
+		const maximumAllowed = mode === 'weekly' ? Number(cfg.maximumWeeklyOrderAmount || 0) : Number(cfg.maximumMonthlyOrderAmount || 0);
+		if (maximumAllowed > 0 && quote.total > maximumAllowed) {
+			const err = new Error(`Maximum ${mode} order is ${maximumAllowed}`);
 			err.statusCode = 400;
 			throw err;
 		}

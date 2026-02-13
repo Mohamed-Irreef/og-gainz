@@ -65,7 +65,7 @@ export function DashboardLayout() {
   };
 
   return (
-		<div className="h-screen flex bg-oz-neutral/30 overflow-hidden">
+		<div className="h-screen flex bg-oz-neutral/30 overflow-hidden oz-dashboard">
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
@@ -87,7 +87,7 @@ export function DashboardLayout() {
 						<div className="h-16 flex items-center justify-between px-4 border-b border-oz-neutral">
 							<Link to="/" className="flex items-center gap-2">
 								<img 
-									src="/home/logo.png" 
+									src="/user-dashboard-logo.png" 
 									alt="OG GAINZ" 
 									className="h-5 w-auto"
 								/>

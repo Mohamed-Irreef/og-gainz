@@ -47,6 +47,8 @@ import {
   AdminKitchen,
 	AdminUsers,
   AdminUserDetails,
+  AdminWallet,
+  AdminSettings,
 } from "@/pages/admin";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -306,6 +308,22 @@ export default function App() {
           handle={{
             title: 'Kitchen',
             description: 'Track and update daily meal preparation and delivery status.',
+          }}
+        />
+        <Route
+          path="wallet"
+          element={<AdminWallet />}
+          handle={{
+            title: 'Wallet & Credits',
+            description: 'Review and manage wallet balances and credits.',
+          }}
+        />
+        <Route
+          path="settings"
+          element={<AdminSettings />}
+          handle={{
+            title: 'Settings',
+            description: 'Configure admin settings for operations and cutoffs.',
           }}
         />
       </Route>

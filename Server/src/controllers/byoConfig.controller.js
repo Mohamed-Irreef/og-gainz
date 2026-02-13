@@ -3,7 +3,12 @@ const BuildYourOwnConfig = require('../models/BuildYourOwnConfig.model');
 const getSingleton = async () => {
 	let doc = await BuildYourOwnConfig.findOne({}).lean();
 	if (!doc) {
-		doc = await BuildYourOwnConfig.create({ minimumWeeklyOrderAmount: 0, minimumMonthlyOrderAmount: 0 });
+		doc = await BuildYourOwnConfig.create({
+			minimumWeeklyOrderAmount: 0,
+			minimumMonthlyOrderAmount: 0,
+			maximumWeeklyOrderAmount: 0,
+			maximumMonthlyOrderAmount: 0,
+		});
 		doc = doc.toObject({ versionKey: false });
 	}
 	return doc;
@@ -24,7 +29,13 @@ const adminUpdateByoConfig = async (req, res, next) => {
 		const payload = {
 			minimumWeeklyOrderAmount: req.body?.minimumWeeklyOrderAmount,
 			minimumMonthlyOrderAmount: req.body?.minimumMonthlyOrderAmount,
+			maximumWeeklyOrderAmount: req.body?.maximumWeeklyOrderAmount,
+			maximumMonthlyOrderAmount: req.body?.maximumMonthlyOrderAmount,
 		};
+
+		for (const key of Object.keys(payload)) {
+			if (payload[key] === undefined) delete payload[key];
+		}
 
 		const updated = existing
 			? await BuildYourOwnConfig.findByIdAndUpdate(existing._id, payload, { new: true, runValidators: true })

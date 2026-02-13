@@ -11,6 +11,7 @@ import { mealsCatalogService } from '@/services/mealsCatalogService';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import type { Meal } from '@/types/catalog';
 
 const NO_SPACE_UNITS = new Set(['g', 'kg', 'mg', 'ml', 'l', 'oz']);
@@ -63,6 +64,7 @@ const formatIncludedLabel = (name?: string | null, quantity?: string | number | 
 const MealPackDetails = () => {
 	const navigate = useNavigate();
 	const { toast } = useToast();
+	const handleBack = useSafeBack('/meal-packs');
 	const { addItem, state } = useCart();
 	const { id } = useParams<{ id: string }>();
 	const slug = id || '';
@@ -241,12 +243,10 @@ const MealPackDetails = () => {
 					<h1 className="text-xl font-semibold text-oz-primary md:text-3xl md:font-bold">Meal Not Found</h1>
 					<p className="text-muted-foreground mt-3">{error || 'The meal you are looking for does not exist.'}</p>
 					<div className="mt-6">
-						<Link to="/meal-packs">
-							<Button className="bg-oz-secondary hover:bg-oz-secondary/90">
-								<ArrowLeft className="mr-2 h-4 w-4" />
-								Back to Meals
-							</Button>
-						</Link>
+						<Button className="bg-oz-secondary hover:bg-oz-secondary/90" onClick={handleBack}>
+							<ArrowLeft className="mr-2 h-4 w-4" />
+							Back to Meals
+						</Button>
 					</div>
 				</div>
 			</div>
@@ -257,13 +257,14 @@ const MealPackDetails = () => {
 		<div className="animate-fade-in">
 			<div className="bg-oz-neutral/30 border-b border-oz-neutral">
 				<div className="container mx-auto px-4 py-3">
-					<Link
-						to="/meal-packs"
+					<button
+						type="button"
+						onClick={handleBack}
 						className="inline-flex items-center text-sm text-muted-foreground hover:text-oz-primary transition-colors"
 					>
 						<ArrowLeft className="mr-2 h-4 w-4" />
 						Back to Meals
-					</Link>
+					</button>
 				</div>
 			</div>
 

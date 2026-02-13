@@ -7,12 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import {
 	Select,
 	SelectContent,
@@ -36,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { adminBuildYourOwnItemsService } from '@/services/adminBuildYourOwnItemsService';
 import { adminBuildYourOwnItemTypesService } from '@/services/adminBuildYourOwnItemTypesService';
 import type { BuildYourOwnItemEntity, BuildYourOwnItemTypeEntity, BuildYourOwnQuantityUnit } from '@/types/buildYourOwn';
+import { AdminFormLayout, ADMIN_FORM_GRID, FormField } from '@/components/admin';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
 
@@ -420,227 +416,218 @@ export default function AdminBuildYourOwnItems() {
 			</Card>
 
 			<Dialog open={createOpen} onOpenChange={setCreateOpen}>
-				<DialogContent className="max-w-2xl">
-					<DialogHeader>
-						<DialogTitle>New Build-your-own Item</DialogTitle>
-						<DialogDescription>Creates an ingredient with single/weekly/monthly pricing (no trial).</DialogDescription>
-					</DialogHeader>
+				<DialogContent className="max-w-5xl p-0">
+					<AdminFormLayout
+						title="New Build-your-own Item"
+						description="Creates an ingredient with single/weekly/monthly pricing (no trial)."
+						stickyActions
+						actions={
+							<>
+								<Button variant="outline" className="h-11 rounded-xl" onClick={() => setCreateOpen(false)} disabled={creating}>
+									Cancel
+								</Button>
+								<Button className="h-11 rounded-xl" onClick={submitCreate} disabled={creating}>
+									{creating ? 'Creating…' : 'Create'}
+								</Button>
+							</>
+						}
+					>
+						<div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+							<div className={ADMIN_FORM_GRID}>
+								<FormField label="Name" required className="md:col-span-2">
+									<Input value={createDraft.name || ''} onChange={(e) => setCreateDraft((d) => ({ ...d, name: e.target.value }))} />
+								</FormField>
 
-					<div className="grid gap-4 md:grid-cols-2">
-						<div className="grid gap-2 md:col-span-2">
-							<Label>Name</Label>
-							<Input value={createDraft.name || ''} onChange={(e) => setCreateDraft((d) => ({ ...d, name: e.target.value }))} />
-						</div>
+								<FormField label="Item type" required applyInputStyles={false}>
+									<Select value={createDraft.itemTypeId || ''} onValueChange={(v) => setCreateDraft((d) => ({ ...d, itemTypeId: v }))}>
+										<SelectTrigger className="h-11 rounded-xl px-4">
+											<SelectValue placeholder="Select type" />
+										</SelectTrigger>
+										<SelectContent>
+											{types
+												.filter((t) => (t.isActive ?? true))
+												.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+												.map((t) => (
+													<SelectItem key={t.id} value={t.id}>
+														{t.name}
+													</SelectItem>
+												))}
+										</SelectContent>
+									</Select>
+								</FormField>
 
-						<div className="grid gap-2">
-							<Label>Item Type</Label>
-							<Select value={createDraft.itemTypeId || ''} onValueChange={(v) => setCreateDraft((d) => ({ ...d, itemTypeId: v }))}>
-								<SelectTrigger>
-									<SelectValue placeholder="Select type" />
-								</SelectTrigger>
-								<SelectContent>
-									{types
-										.filter((t) => (t.isActive ?? true))
-										.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
-										.map((t) => (
-											<SelectItem key={t.id} value={t.id}>
-												{t.name}
-											</SelectItem>
-										))}
-								</SelectContent>
-							</Select>
-						</div>
+								<FormField label="Display order">
+									<Input type="number" value={String(createDraft.displayOrder ?? 0)} onChange={(e) => setCreateDraft((d) => ({ ...d, displayOrder: Number(e.target.value) || 0 }))} />
+								</FormField>
 
-						<div className="grid gap-2">
-							<Label>Display Order</Label>
-							<Input type="number" value={String(createDraft.displayOrder ?? 0)} onChange={(e) => setCreateDraft((d) => ({ ...d, displayOrder: Number(e.target.value) || 0 }))} />
-						</div>
+								<FormField label="Quantity value" required>
+									<Input type="number" value={String(createDraft.quantityValue ?? 0)} onChange={(e) => setCreateDraft((d) => ({ ...d, quantityValue: Number(e.target.value) || 0 }))} />
+								</FormField>
+								<FormField label="Quantity unit" required applyInputStyles={false}>
+									<Select value={(createDraft.quantityUnit || 'g') as string} onValueChange={(v) => setCreateDraft((d) => ({ ...d, quantityUnit: v as BuildYourOwnQuantityUnit }))}>
+										<SelectTrigger className="h-11 rounded-xl px-4">
+											<SelectValue placeholder="Select unit" />
+										</SelectTrigger>
+										<SelectContent>
+											{UNITS.map((u) => (
+												<SelectItem key={u} value={u}>
+													{u}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</FormField>
 
-						<div className="grid gap-2">
-							<Label>Quantity Value</Label>
-							<Input type="number" value={String(createDraft.quantityValue ?? 0)} onChange={(e) => setCreateDraft((d) => ({ ...d, quantityValue: Number(e.target.value) || 0 }))} />
-						</div>
-						<div className="grid gap-2">
-							<Label>Quantity Unit</Label>
-							<Select value={(createDraft.quantityUnit || 'g') as string} onValueChange={(v) => setCreateDraft((d) => ({ ...d, quantityUnit: v as BuildYourOwnQuantityUnit }))}>
-								<SelectTrigger>
-									<SelectValue placeholder="Select unit" />
-								</SelectTrigger>
-								<SelectContent>
-									{UNITS.map((u) => (
-										<SelectItem key={u} value={u}>
-											{u}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
+								<FormField label="Protein (g) (optional)">
+									<Input type="number" value={createDraft.proteinGrams == null ? '' : String(createDraft.proteinGrams)} onChange={(e) => setCreateDraft((d) => ({ ...d, proteinGrams: e.target.value === '' ? undefined : Number(e.target.value) }))} />
+								</FormField>
+								<FormField label="Calories (optional)">
+									<Input type="number" value={createDraft.calories == null ? '' : String(createDraft.calories)} onChange={(e) => setCreateDraft((d) => ({ ...d, calories: e.target.value === '' ? undefined : Number(e.target.value) }))} />
+								</FormField>
 
-						<div className="grid gap-2">
-							<Label>Protein (g) (optional)</Label>
-							<Input type="number" value={createDraft.proteinGrams == null ? '' : String(createDraft.proteinGrams)} onChange={(e) => setCreateDraft((d) => ({ ...d, proteinGrams: e.target.value === '' ? undefined : Number(e.target.value) }))} />
-						</div>
-						<div className="grid gap-2">
-							<Label>Calories (optional)</Label>
-							<Input type="number" value={createDraft.calories == null ? '' : String(createDraft.calories)} onChange={(e) => setCreateDraft((d) => ({ ...d, calories: e.target.value === '' ? undefined : Number(e.target.value) }))} />
-						</div>
+								<FormField label="Single price" required>
+									<Input type="number" value={String(createDraft.pricing?.single ?? 0)} onChange={(e) => setCreateDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0, weekly: 0, monthly: 0 }), single: Number(e.target.value) || 0 } }))} />
+								</FormField>
+								<FormField label="Weekly price" required>
+									<Input type="number" value={String(createDraft.pricing?.weekly ?? 0)} onChange={(e) => setCreateDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0, weekly: 0, monthly: 0 }), weekly: Number(e.target.value) || 0 } }))} />
+								</FormField>
+								<FormField label="Monthly price" required>
+									<Input type="number" value={String(createDraft.pricing?.monthly ?? 0)} onChange={(e) => setCreateDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0, weekly: 0, monthly: 0 }), monthly: Number(e.target.value) || 0 } }))} />
+								</FormField>
 
-						<div className="grid gap-2">
-							<Label>Single Price</Label>
-							<Input type="number" value={String(createDraft.pricing?.single ?? 0)} onChange={(e) => setCreateDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0, weekly: 0, monthly: 0 }), single: Number(e.target.value) || 0 } }))} />
-						</div>
-						<div className="grid gap-2">
-							<Label>Weekly Price</Label>
-							<Input type="number" value={String(createDraft.pricing?.weekly ?? 0)} onChange={(e) => setCreateDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0, weekly: 0, monthly: 0 }), weekly: Number(e.target.value) || 0 } }))} />
-						</div>
-						<div className="grid gap-2">
-							<Label>Monthly Price</Label>
-							<Input type="number" value={String(createDraft.pricing?.monthly ?? 0)} onChange={(e) => setCreateDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0, weekly: 0, monthly: 0 }), monthly: Number(e.target.value) || 0 } }))} />
-						</div>
+								<FormField label="Weekly servings count" required>
+									<Input type="number" value={String(createDraft.servings?.weekly ?? 5)} onChange={(e) => setCreateDraft((d) => ({ ...d, servings: { ...(d.servings || { weekly: 5, monthly: 20 }), weekly: Number(e.target.value) || 0 } }))} />
+								</FormField>
+								<FormField label="Monthly servings count" required>
+									<Input type="number" value={String(createDraft.servings?.monthly ?? 20)} onChange={(e) => setCreateDraft((d) => ({ ...d, servings: { ...(d.servings || { weekly: 5, monthly: 20 }), monthly: Number(e.target.value) || 0 } }))} />
+								</FormField>
 
-						<div className="grid gap-2">
-							<Label>Weekly servings count</Label>
-							<Input type="number" value={String(createDraft.servings?.weekly ?? 5)} onChange={(e) => setCreateDraft((d) => ({ ...d, servings: { ...(d.servings || { weekly: 5, monthly: 20 }), weekly: Number(e.target.value) || 0 } }))} />
-						</div>
-						<div className="grid gap-2">
-							<Label>Monthly servings count</Label>
-							<Input type="number" value={String(createDraft.servings?.monthly ?? 20)} onChange={(e) => setCreateDraft((d) => ({ ...d, servings: { ...(d.servings || { weekly: 5, monthly: 20 }), monthly: Number(e.target.value) || 0 } }))} />
-						</div>
+								<FormField label="Image (required)" hint="One image per item (Cloudinary)." className="md:col-span-2">
+									<Input type="file" accept="image/*" onChange={(e) => setCreateDraft((d) => ({ ...d, _imageFile: e.target.files?.[0] || null }))} />
+								</FormField>
 
-						<div className="grid gap-2 md:col-span-2">
-							<Label>Image (required)</Label>
-							<Input type="file" accept="image/*" onChange={(e) => setCreateDraft((d) => ({ ...d, _imageFile: e.target.files?.[0] || null }))} />
-							<p className="text-xs text-muted-foreground">One image per item (Cloudinary).</p>
-						</div>
-
-						<div className="flex items-center justify-between rounded-md border p-3 md:col-span-2">
-							<div className="text-sm">
-								<div className="font-medium">Active</div>
-								<div className="text-muted-foreground">Controls user visibility</div>
+								<FormField label="Status" applyInputStyles={false} className="md:col-span-2">
+									<div className="flex h-11 items-center justify-between rounded-xl border px-4">
+										<span className="text-sm text-muted-foreground">Controls user visibility</span>
+										<Switch checked={Boolean(createDraft.isActive)} onCheckedChange={(v) => setCreateDraft((d) => ({ ...d, isActive: v }))} />
+									</div>
+								</FormField>
 							</div>
-							<Switch checked={Boolean(createDraft.isActive)} onCheckedChange={(v) => setCreateDraft((d) => ({ ...d, isActive: v }))} />
 						</div>
-					</div>
-
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
-						<Button onClick={submitCreate} disabled={creating}>{creating ? 'Creating…' : 'Create'}</Button>
-					</DialogFooter>
+					</AdminFormLayout>
 				</DialogContent>
 			</Dialog>
 
 			<Dialog open={editOpen} onOpenChange={setEditOpen}>
-				<DialogContent className="max-w-2xl">
-					<DialogHeader>
-						<DialogTitle>Edit Item</DialogTitle>
-						<DialogDescription>Update fields and optionally replace the image.</DialogDescription>
-					</DialogHeader>
+				<DialogContent className="max-w-5xl p-0">
+					<AdminFormLayout
+						title="Edit Item"
+						description="Update fields and optionally replace the image."
+						stickyActions
+						actions={
+							<>
+								<Button variant="outline" className="h-11 rounded-xl" onClick={() => setEditOpen(false)} disabled={saving || uploadingImage}>
+									Cancel
+								</Button>
+								<Button className="h-11 rounded-xl" onClick={submitEdit} disabled={saving || uploadingImage}>
+									{saving ? 'Saving…' : 'Save'}
+								</Button>
+							</>
+						}
+					>
+						{editItem ? (
+							<div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+								<div className={ADMIN_FORM_GRID}>
+									<FormField label="Name" required className="md:col-span-2">
+										<Input value={editDraft.name || ''} onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))} />
+									</FormField>
 
-					{editItem ? (
-						<div className="grid gap-4 md:grid-cols-2">
-							<div className="grid gap-2 md:col-span-2">
-								<Label>Name</Label>
-								<Input value={editDraft.name || ''} onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))} />
-							</div>
+									<FormField label="Item type" required applyInputStyles={false}>
+										<Select value={editDraft.itemTypeId || ''} onValueChange={(v) => setEditDraft((d) => ({ ...d, itemTypeId: v }))}>
+											<SelectTrigger className="h-11 rounded-xl px-4">
+												<SelectValue placeholder="Select type" />
+											</SelectTrigger>
+											<SelectContent>
+												{types
+													.filter((t) => (t.isActive ?? true))
+													.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+													.map((t) => (
+														<SelectItem key={t.id} value={t.id}>
+															{t.name}
+														</SelectItem>
+													))}
+											</SelectContent>
+										</Select>
+									</FormField>
 
-							<div className="grid gap-2">
-								<Label>Item Type</Label>
-								<Select value={editDraft.itemTypeId || ''} onValueChange={(v) => setEditDraft((d) => ({ ...d, itemTypeId: v }))}>
-									<SelectTrigger>
-										<SelectValue placeholder="Select type" />
-									</SelectTrigger>
-									<SelectContent>
-										{types
-											.filter((t) => (t.isActive ?? true))
-											.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
-											.map((t) => (
-												<SelectItem key={t.id} value={t.id}>
-													{t.name}
-												</SelectItem>
-											))}
-									</SelectContent>
-								</Select>
-							</div>
+									<FormField label="Display order">
+										<Input type="number" value={String(editDraft.displayOrder ?? 0)} onChange={(e) => setEditDraft((d) => ({ ...d, displayOrder: Number(e.target.value) || 0 }))} />
+									</FormField>
 
-							<div className="grid gap-2">
-								<Label>Display Order</Label>
-								<Input type="number" value={String(editDraft.displayOrder ?? 0)} onChange={(e) => setEditDraft((d) => ({ ...d, displayOrder: Number(e.target.value) || 0 }))} />
-							</div>
+									<FormField label="Quantity value" required>
+										<Input type="number" value={String(editDraft.quantityValue ?? 0)} onChange={(e) => setEditDraft((d) => ({ ...d, quantityValue: Number(e.target.value) || 0 }))} />
+									</FormField>
+									<FormField label="Quantity unit" required applyInputStyles={false}>
+										<Select value={(editDraft.quantityUnit || 'g') as string} onValueChange={(v) => setEditDraft((d) => ({ ...d, quantityUnit: v as BuildYourOwnQuantityUnit }))}>
+											<SelectTrigger className="h-11 rounded-xl px-4">
+												<SelectValue placeholder="Select unit" />
+											</SelectTrigger>
+											<SelectContent>
+												{UNITS.map((u) => (
+													<SelectItem key={u} value={u}>
+														{u}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</FormField>
 
-							<div className="grid gap-2">
-								<Label>Quantity Value</Label>
-								<Input type="number" value={String(editDraft.quantityValue ?? 0)} onChange={(e) => setEditDraft((d) => ({ ...d, quantityValue: Number(e.target.value) || 0 }))} />
-							</div>
-							<div className="grid gap-2">
-								<Label>Quantity Unit</Label>
-								<Select value={(editDraft.quantityUnit || 'g') as string} onValueChange={(v) => setEditDraft((d) => ({ ...d, quantityUnit: v as BuildYourOwnQuantityUnit }))}>
-									<SelectTrigger>
-										<SelectValue placeholder="Select unit" />
-									</SelectTrigger>
-									<SelectContent>
-										{UNITS.map((u) => (
-											<SelectItem key={u} value={u}>
-												{u}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
+									<FormField label="Protein (g) (optional)">
+										<Input type="number" value={editDraft.proteinGrams == null ? '' : String(editDraft.proteinGrams)} onChange={(e) => setEditDraft((d) => ({ ...d, proteinGrams: e.target.value === '' ? undefined : Number(e.target.value) }))} />
+									</FormField>
+									<FormField label="Calories (optional)">
+										<Input type="number" value={editDraft.calories == null ? '' : String(editDraft.calories)} onChange={(e) => setEditDraft((d) => ({ ...d, calories: e.target.value === '' ? undefined : Number(e.target.value) }))} />
+									</FormField>
 
-							<div className="grid gap-2">
-								<Label>Protein (g) (optional)</Label>
-								<Input type="number" value={editDraft.proteinGrams == null ? '' : String(editDraft.proteinGrams)} onChange={(e) => setEditDraft((d) => ({ ...d, proteinGrams: e.target.value === '' ? undefined : Number(e.target.value) }))} />
-							</div>
-							<div className="grid gap-2">
-								<Label>Calories (optional)</Label>
-								<Input type="number" value={editDraft.calories == null ? '' : String(editDraft.calories)} onChange={(e) => setEditDraft((d) => ({ ...d, calories: e.target.value === '' ? undefined : Number(e.target.value) }))} />
-							</div>
+									<FormField label="Single price" required>
+										<Input type="number" value={String(editDraft.pricing?.single ?? 0)} onChange={(e) => setEditDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0, weekly: 0, monthly: 0 }), single: Number(e.target.value) || 0 } }))} />
+									</FormField>
+									<FormField label="Weekly price" required>
+										<Input type="number" value={String(editDraft.pricing?.weekly ?? 0)} onChange={(e) => setEditDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0, weekly: 0, monthly: 0 }), weekly: Number(e.target.value) || 0 } }))} />
+									</FormField>
+									<FormField label="Monthly price" required>
+										<Input type="number" value={String(editDraft.pricing?.monthly ?? 0)} onChange={(e) => setEditDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0, weekly: 0, monthly: 0 }), monthly: Number(e.target.value) || 0 } }))} />
+									</FormField>
 
-							<div className="grid gap-2">
-								<Label>Single Price</Label>
-								<Input type="number" value={String(editDraft.pricing?.single ?? 0)} onChange={(e) => setEditDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0, weekly: 0, monthly: 0 }), single: Number(e.target.value) || 0 } }))} />
-							</div>
-							<div className="grid gap-2">
-								<Label>Weekly Price</Label>
-								<Input type="number" value={String(editDraft.pricing?.weekly ?? 0)} onChange={(e) => setEditDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0, weekly: 0, monthly: 0 }), weekly: Number(e.target.value) || 0 } }))} />
-							</div>
-							<div className="grid gap-2">
-								<Label>Monthly Price</Label>
-								<Input type="number" value={String(editDraft.pricing?.monthly ?? 0)} onChange={(e) => setEditDraft((d) => ({ ...d, pricing: { ...(d.pricing || { single: 0, weekly: 0, monthly: 0 }), monthly: Number(e.target.value) || 0 } }))} />
-							</div>
+									<FormField label="Weekly servings count" required>
+										<Input type="number" value={String(editDraft.servings?.weekly ?? 5)} onChange={(e) => setEditDraft((d) => ({ ...d, servings: { ...(d.servings || { weekly: 5, monthly: 20 }), weekly: Number(e.target.value) || 0 } }))} />
+									</FormField>
+									<FormField label="Monthly servings count" required>
+										<Input type="number" value={String(editDraft.servings?.monthly ?? 20)} onChange={(e) => setEditDraft((d) => ({ ...d, servings: { ...(d.servings || { weekly: 5, monthly: 20 }), monthly: Number(e.target.value) || 0 } }))} />
+									</FormField>
 
-							<div className="grid gap-2">
-								<Label>Weekly servings count</Label>
-								<Input type="number" value={String(editDraft.servings?.weekly ?? 5)} onChange={(e) => setEditDraft((d) => ({ ...d, servings: { ...(d.servings || { weekly: 5, monthly: 20 }), weekly: Number(e.target.value) || 0 } }))} />
-							</div>
-							<div className="grid gap-2">
-								<Label>Monthly servings count</Label>
-								<Input type="number" value={String(editDraft.servings?.monthly ?? 20)} onChange={(e) => setEditDraft((d) => ({ ...d, servings: { ...(d.servings || { weekly: 5, monthly: 20 }), monthly: Number(e.target.value) || 0 } }))} />
-							</div>
+									<FormField label="Replace image" hint="Current image is shown in the list. Upload replaces it." className="md:col-span-2">
+										<Input
+											type="file"
+											accept="image/*"
+											disabled={uploadingImage}
+											onChange={(e) => {
+												const file = e.target.files?.[0];
+												if (file) replaceImage(file);
+											}}
+										/>
+									</FormField>
 
-							<div className="grid gap-2 md:col-span-2">
-								<Label>Replace image</Label>
-								<Input type="file" accept="image/*" disabled={uploadingImage} onChange={(e) => {
-									const file = e.target.files?.[0];
-									if (file) replaceImage(file);
-								}} />
-								<p className="text-xs text-muted-foreground">Current image is shown in the list. Upload replaces it.</p>
-							</div>
-
-							<div className="flex items-center justify-between rounded-md border p-3 md:col-span-2">
-								<div className="text-sm">
-									<div className="font-medium">Active</div>
-									<div className="text-muted-foreground">Controls user visibility</div>
+									<FormField label="Status" applyInputStyles={false} className="md:col-span-2">
+										<div className="flex h-11 items-center justify-between rounded-xl border px-4">
+											<span className="text-sm text-muted-foreground">Controls user visibility</span>
+											<Switch checked={Boolean(editDraft.isActive)} onCheckedChange={(v) => setEditDraft((d) => ({ ...d, isActive: v }))} />
+										</div>
+									</FormField>
 								</div>
-								<Switch checked={Boolean(editDraft.isActive)} onCheckedChange={(v) => setEditDraft((d) => ({ ...d, isActive: v }))} />
 							</div>
-						</div>
-					) : null}
-
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setEditOpen(false)} disabled={saving || uploadingImage}>Cancel</Button>
-						<Button onClick={submitEdit} disabled={saving || uploadingImage}>{saving ? 'Saving…' : 'Save'}</Button>
-					</DialogFooter>
+						) : null}
+					</AdminFormLayout>
 				</DialogContent>
 			</Dialog>
 		</div>

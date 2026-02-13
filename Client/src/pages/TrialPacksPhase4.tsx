@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { ArrowLeft } from 'lucide-react';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import type { Meal } from '@/types/catalog';
 import { MealCard } from '@/components/shared/MealCard';
 
 export default function TrialPacksPhase4() {
+	const handleBack = useSafeBack('/meal-packs');
 	const [meals, setMeals] = useState<Meal[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -46,10 +47,10 @@ export default function TrialPacksPhase4() {
 				
 				{/* Content */}
 				<div className="container mx-auto px-4 relative z-10">
-					<Link to="/meal-packs" className="inline-flex items-center text-white/90 hover:text-white text-sm font-medium transition-colors">
+					<button type="button" onClick={handleBack} className="inline-flex items-center text-white/90 hover:text-white text-sm font-medium transition-colors">
 						<ArrowLeft className="mr-2 h-4 w-4" />
 						Back to Meals
-					</Link>
+					</button>
 					<div className="max-w-3xl mx-auto text-center mt-6">
 						<h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3">Trial Packs</h1>
 						<p className="text-lg text-white/90 max-w-2xl mx-auto mb-0">

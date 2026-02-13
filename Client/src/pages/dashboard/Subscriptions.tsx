@@ -47,6 +47,12 @@ import type { BuildYourOwnItemEntity } from "@/types/buildYourOwn";
 const Subscriptions = () => {
   const { user } = useUser();
   const { toast } = useToast();
+  const pauseSkipDisabled = true;
+  const disabledActionClass = pauseSkipDisabled ? 'opacity-60 cursor-not-allowed' : '';
+  const showComingSoon = () => {
+    // TODO: Re-enable pause/skip workflows when the backend rollout is ready.
+    toast({ title: 'This feature will be coming soon.' });
+  };
 
   const safeString = (v: unknown) => String(v ?? '').trim();
   const [orders, setOrders] = useState<PublicOrder[]>([]);
@@ -298,6 +304,10 @@ const Subscriptions = () => {
   }, [calendarMonth]);
 
   const openPauseRequest = (kind: 'customMeal' | 'addon' | 'mealPack', subscriptionId: string) => {
+    if (pauseSkipDisabled) {
+      showComingSoon();
+      return;
+    }
     setPauseRequestTarget({ kind, subscriptionId });
     const t = tomorrowISO();
     setPauseRequestStart(t);
@@ -307,6 +317,10 @@ const Subscriptions = () => {
   };
 
   const submitPauseRequest = async () => {
+    if (pauseSkipDisabled) {
+      showComingSoon();
+      return;
+    }
     if (!pauseRequestTarget) return;
     setPauseRequestSaving(true);
     try {
@@ -336,6 +350,10 @@ const Subscriptions = () => {
   };
 
   const withdrawRequest = async (requestId: string) => {
+    if (pauseSkipDisabled) {
+      showComingSoon();
+      return;
+    }
     setWithdrawingRequestId(requestId);
     try {
       await pauseSkipService.withdrawRequest(requestId);
@@ -468,6 +486,10 @@ const Subscriptions = () => {
   };
 
   const requestWithdrawPause = async (pauseRequestId: string) => {
+    if (pauseSkipDisabled) {
+      showComingSoon();
+      return;
+    }
     setWithdrawingRequestId(pauseRequestId);
     try {
       const created = await pauseSkipService.requestWithdrawPause(pauseRequestId);
@@ -485,6 +507,10 @@ const Subscriptions = () => {
   };
 
   const handleToggleCustomMealSub = async (id: string, nextStatus: "active" | "paused") => {
+    if (pauseSkipDisabled) {
+      showComingSoon();
+      return;
+    }
     const updated = await customMealSubscriptionService.setStatus(id, nextStatus);
     if (!updated) return;
     setCustomMealSubscriptions((prev) => prev.map((s) => (s.id === id ? updated : s)));
@@ -495,6 +521,10 @@ const Subscriptions = () => {
   };
 
   const handleToggleAddonSub = async (id: string, nextStatus: "active" | "paused") => {
+    if (pauseSkipDisabled) {
+      showComingSoon();
+      return;
+    }
     const updated = await addonSubscriptionsService.setStatus(id, nextStatus);
     if (!updated) return;
     setAddonSubscriptions((prev) => prev.map((s) => (s.id === id ? updated : s)));
@@ -651,6 +681,10 @@ const Subscriptions = () => {
   };
 
   const requestSkip = async (deliveryId: string) => {
+    if (pauseSkipDisabled) {
+      showComingSoon();
+      return;
+    }
     if (!deliveryId) return;
     setRequestingSkipDeliveryId(deliveryId);
     try {
@@ -993,7 +1027,11 @@ const Subscriptions = () => {
             <Button variant="outline" onClick={() => setPauseRequestOpen(false)} disabled={pauseRequestSaving}>
               Cancel
             </Button>
-            <Button onClick={submitPauseRequest} disabled={pauseRequestSaving || !pauseRequestTarget}>
+            <Button
+              onClick={submitPauseRequest}
+              disabled={pauseSkipDisabled ? false : pauseRequestSaving || !pauseRequestTarget}
+              className={disabledActionClass}
+            >
               Submit Request
             </Button>
           </div>
@@ -1357,7 +1395,8 @@ const Subscriptions = () => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => openPauseRequest('customMeal', p.subscriptionId)}
-                                disabled={isPending || disabledByCutoff}
+                                  disabled={pauseSkipDisabled ? false : isPending || disabledByCutoff}
+                                  className={disabledActionClass}
                               >
                                 <Pause className="mr-2 h-4 w-4" /> {isPending ? 'Pause Requested' : 'Request Pause'}
                               </Button>
@@ -1448,7 +1487,8 @@ const Subscriptions = () => {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => openPauseRequest('customMeal', sub.subscriptionId)}
-                                    disabled={isPending || isPausedOrScheduled || disabledByCutoff}
+                                    disabled={pauseSkipDisabled ? false : isPending || isPausedOrScheduled || disabledByCutoff}
+                                    className={disabledActionClass}
                                   >
                                     <Pause className="mr-2 h-4 w-4" /> {isPending ? 'Pause Requested' : 'Request Pause'}
                                   </Button>
@@ -1473,7 +1513,8 @@ const Subscriptions = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => requestWithdrawPause(pauseState.request!.id)}
-                                  disabled={pauseState.withdrawPending || withdrawingRequestId === pauseState.request!.id}
+                                  disabled={pauseSkipDisabled ? false : pauseState.withdrawPending || withdrawingRequestId === pauseState.request!.id}
+                                  className={disabledActionClass}
                                 >
                                   {pauseState.withdrawPending ? 'Withdraw Requested' : 'Withdraw Pause'}
                                 </Button>
@@ -1573,7 +1614,8 @@ const Subscriptions = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => openPauseRequest('addon', p.subscriptionId)}
-                                  disabled={isPending || disabledByCutoff}
+                                  disabled={pauseSkipDisabled ? false : isPending || disabledByCutoff}
+                                  className={disabledActionClass}
                                 >
                                   <Pause className="mr-2 h-4 w-4" /> {isPending ? 'Pause Requested' : 'Request Pause'}
                                 </Button>
@@ -1665,7 +1707,8 @@ const Subscriptions = () => {
                                       variant="outline"
                                       size="sm"
                                       onClick={() => openPauseRequest('addon', sub.subscriptionId)}
-                                      disabled={isPending || isPausedOrScheduled || disabledByCutoff}
+                                      disabled={pauseSkipDisabled ? false : isPending || isPausedOrScheduled || disabledByCutoff}
+                                      className={disabledActionClass}
                                     >
                                       <Pause className="mr-2 h-4 w-4" /> {isPending ? 'Pause Requested' : 'Request Pause'}
                                     </Button>
@@ -1690,7 +1733,8 @@ const Subscriptions = () => {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => requestWithdrawPause(pauseState.request!.id)}
-                                    disabled={pauseState.withdrawPending || withdrawingRequestId === pauseState.request!.id}
+                                    disabled={pauseSkipDisabled ? false : pauseState.withdrawPending || withdrawingRequestId === pauseState.request!.id}
+                                    className={disabledActionClass}
                                   >
                                     {pauseState.withdrawPending ? 'Withdraw Requested' : 'Withdraw Pause'}
                                   </Button>
@@ -1753,7 +1797,8 @@ const Subscriptions = () => {
                             variant="outline"
                             size="sm"
                             onClick={() => openPauseRequest('addon', s.id)}
-                            disabled={s.status !== 'active' || pendingPauseSubscriptionIds.has(s.id)}
+                            disabled={pauseSkipDisabled ? false : s.status !== 'active' || pendingPauseSubscriptionIds.has(s.id)}
+                            className={disabledActionClass}
                           >
                             <Pause className="mr-2 h-4 w-4" /> {pendingPauseSubscriptionIds.has(s.id) ? 'Pause Requested' : 'Request Pause'}
                           </Button>
@@ -1763,8 +1808,8 @@ const Subscriptions = () => {
                           <div className="mt-2 flex justify-end">
                             <Button
                               size="sm"
-                              className="bg-oz-accent hover:bg-oz-accent/90"
                               onClick={() => handleToggleAddonSub(s.id, "active")}
+                              className={pauseSkipDisabled ? `bg-oz-accent hover:bg-oz-accent/90 ${disabledActionClass}` : 'bg-oz-accent hover:bg-oz-accent/90'}
                             >
                               <Play className="mr-2 h-4 w-4" /> Resume
                             </Button>
@@ -1886,7 +1931,8 @@ const Subscriptions = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => openPauseRequest('mealPack', p.subscriptionId)}
-                              disabled={isPending || disabledByCutoff}
+                              disabled={pauseSkipDisabled ? false : isPending || disabledByCutoff}
+                              className={disabledActionClass}
                             >
                               <Pause className="mr-2 h-4 w-4" /> {isPending ? 'Pause Requested' : 'Request Pause'}
                             </Button>
@@ -2025,7 +2071,8 @@ const Subscriptions = () => {
                             variant="outline"
                             size="sm"
                             onClick={() => openPauseRequest('mealPack', sub.subscriptionId)}
-                            disabled={isPending || isPausedOrScheduled || disabledByCutoff}
+                            disabled={pauseSkipDisabled ? false : isPending || isPausedOrScheduled || disabledByCutoff}
+                            className={disabledActionClass}
                           >
                             <Pause className="mr-2 h-4 w-4" />
                             {isPending ? 'Pause Requested' : 'Request Pause'}
@@ -2051,7 +2098,8 @@ const Subscriptions = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => requestWithdrawPause(pauseState.request!.id)}
-                          disabled={pauseState.withdrawPending || withdrawingRequestId === pauseState.request!.id}
+                          disabled={pauseSkipDisabled ? false : pauseState.withdrawPending || withdrawingRequestId === pauseState.request!.id}
+                          className={disabledActionClass}
                         >
                           {pauseState.withdrawPending ? 'Withdraw Requested' : 'Withdraw Pause'}
                         </Button>
@@ -2199,7 +2247,8 @@ const Subscriptions = () => {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      disabled={disabled}
+                                      disabled={pauseSkipDisabled ? false : disabled}
+                                      className={disabledActionClass}
                                       onClick={() => id && requestSkip(id)}
                                     >
                                       {pendingSkip ? 'Skip Requested' : 'Request Skip'}
@@ -2292,7 +2341,8 @@ const Subscriptions = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        disabled={withdrawingRequestId === r.id}
+                        disabled={pauseSkipDisabled ? false : withdrawingRequestId === r.id}
+                        className={disabledActionClass}
                         onClick={() => withdrawRequest(r.id)}
                       >
                         Withdraw Request

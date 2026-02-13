@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { useCart } from '@/context/CartContext';
 import { useUser } from '@/context/UserContext';
 import { cartCheckoutService } from '@/services/cartCheckoutService';
@@ -90,6 +91,7 @@ const loadRazorpayScript = () => {
 export default function Checkout() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const handleBack = useSafeBack('/order-details');
   const { user, isAuthenticated, isLoading, updateProfile } = useUser();
   const { state, quote, isQuoting, quoteError, refreshQuote, setDeliveryLocation } = useCart();
 
@@ -566,13 +568,14 @@ export default function Checkout() {
     <div className="animate-fade-in">
       <div className="bg-oz-neutral/30 border-b border-oz-neutral">
         <div className="container mx-auto px-4 py-4">
-          <Link
-            to="/order-details"
+          <button
+            type="button"
+            onClick={handleBack}
             className="inline-flex items-center text-sm text-muted-foreground hover:text-oz-primary transition-colors"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Order Details
-          </Link>
+          </button>
         </div>
       </div>
 

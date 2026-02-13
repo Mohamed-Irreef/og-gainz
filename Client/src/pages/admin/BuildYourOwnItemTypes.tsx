@@ -7,12 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -28,6 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { adminBuildYourOwnItemTypesService } from '@/services/adminBuildYourOwnItemTypesService';
 import type { BuildYourOwnItemTypeEntity } from '@/types/buildYourOwn';
+import { AdminFormLayout, ADMIN_FORM_GRID, FormField } from '@/components/admin';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
 
@@ -282,62 +278,73 @@ export default function AdminBuildYourOwnItemTypes() {
 			</Card>
 
 			<Dialog open={createOpen} onOpenChange={setCreateOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>New Item Type</DialogTitle>
-						<DialogDescription>Create a new category for Build-your-own items.</DialogDescription>
-					</DialogHeader>
-					<div className="grid gap-4">
-						<div className="grid gap-2">
-							<Label>Name</Label>
-							<Input value={createDraft.name || ''} onChange={(e) => setCreateDraft((d) => ({ ...d, name: e.target.value }))} />
+				<DialogContent className="max-w-5xl p-0">
+					<AdminFormLayout
+						title="New Item Type"
+						description="Create a new category for Build-your-own items."
+						stickyActions
+						actions={
+							<>
+								<Button variant="outline" className="h-11 rounded-xl" onClick={() => setCreateOpen(false)} disabled={creating}>
+									Cancel
+								</Button>
+								<Button className="h-11 rounded-xl" onClick={submitCreate} disabled={creating}>
+									{creating ? 'Creating...' : 'Create'}
+								</Button>
+							</>
+						}
+					>
+						<div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+							<div className={ADMIN_FORM_GRID}>
+								<FormField label="Name" required>
+									<Input value={createDraft.name || ''} onChange={(e) => setCreateDraft((d) => ({ ...d, name: e.target.value }))} />
+								</FormField>
+								<FormField label="Display order" hint="Lower numbers appear first.">
+									<Input type="number" value={String(createDraft.displayOrder ?? 0)} onChange={(e) => setCreateDraft((d) => ({ ...d, displayOrder: Number(e.target.value) || 0 }))} />
+								</FormField>
+							</div>
 						</div>
-						<div className="grid gap-2">
-							<Label>Display Order</Label>
-							<Input type="number" value={String(createDraft.displayOrder ?? 0)} onChange={(e) => setCreateDraft((d) => ({ ...d, displayOrder: Number(e.target.value) || 0 }))} />
-							<p className="text-xs text-muted-foreground">Lower numbers appear first.</p>
-						</div>
-					</div>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
-						<Button onClick={submitCreate} disabled={creating}>{creating ? 'Creating...' : 'Create'}</Button>
-					</DialogFooter>
+					</AdminFormLayout>
 				</DialogContent>
 			</Dialog>
 
 			<Dialog open={editOpen} onOpenChange={setEditOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Edit Item Type</DialogTitle>
-						<DialogDescription>Update the category fields.</DialogDescription>
-					</DialogHeader>
-					<div className="grid gap-4">
-						<div className="grid gap-2">
-							<Label>Name</Label>
-							<Input value={editDraft.name || ''} onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))} />
-						</div>
-						<div className="grid gap-2">
-							<Label>Display Order</Label>
-							<Input type="number" value={String(editDraft.displayOrder ?? 0)} onChange={(e) => setEditDraft((d) => ({ ...d, displayOrder: Number(e.target.value) || 0 }))} />
-							<p className="text-xs text-muted-foreground">Lower numbers appear first.</p>
-						</div>
-						<div className="grid gap-2">
-							<Label>Slug</Label>
-							<Input value={editDraft.slug || ''} disabled />
-							<p className="text-xs text-muted-foreground">Slug is auto-generated from the name.</p>
-						</div>
-						<div className="flex items-center justify-between rounded-md border p-3">
-							<div className="text-sm">
-								<div className="font-medium">Active</div>
-								<div className="text-muted-foreground">Controls user visibility</div>
+				<DialogContent className="max-w-5xl p-0">
+					<AdminFormLayout
+						title="Edit Item Type"
+						description="Update the category fields."
+						stickyActions
+						actions={
+							<>
+								<Button variant="outline" className="h-11 rounded-xl" onClick={() => setEditOpen(false)} disabled={saving}>
+									Cancel
+								</Button>
+								<Button className="h-11 rounded-xl" onClick={submitEdit} disabled={saving}>
+									{saving ? 'Saving...' : 'Save'}
+								</Button>
+							</>
+						}
+					>
+						<div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+							<div className={ADMIN_FORM_GRID}>
+								<FormField label="Name" required>
+									<Input value={editDraft.name || ''} onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))} />
+								</FormField>
+								<FormField label="Display order" hint="Lower numbers appear first.">
+									<Input type="number" value={String(editDraft.displayOrder ?? 0)} onChange={(e) => setEditDraft((d) => ({ ...d, displayOrder: Number(e.target.value) || 0 }))} />
+								</FormField>
+								<FormField label="Slug" hint="Slug is auto-generated from the name.">
+									<Input value={editDraft.slug || ''} disabled />
+								</FormField>
+								<FormField label="Status" applyInputStyles={false}>
+									<div className="flex h-11 items-center justify-between rounded-xl border px-4">
+										<div className="text-sm text-muted-foreground">Controls user visibility</div>
+										<Switch checked={Boolean(editDraft.isActive)} onCheckedChange={(v) => setEditDraft((d) => ({ ...d, isActive: v }))} />
+									</div>
+								</FormField>
 							</div>
-							<Switch checked={Boolean(editDraft.isActive)} onCheckedChange={(v) => setEditDraft((d) => ({ ...d, isActive: v }))} />
 						</div>
-					</div>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setEditOpen(false)} disabled={saving}>Cancel</Button>
-						<Button onClick={submitEdit} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
-					</DialogFooter>
+					</AdminFormLayout>
 				</DialogContent>
 			</Dialog>
 		</div>

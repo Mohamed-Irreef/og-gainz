@@ -25,10 +25,6 @@ import {
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
 	DialogTrigger,
 } from '@/components/ui/dialog';
 import {
@@ -43,6 +39,7 @@ import { useToast } from '@/hooks/use-toast';
 import { adminUsersService, type AdminUserListItem, type AdminUserWallet } from '@/services/adminUsersService';
 import { adminWalletService, type AdminWalletSummary, type AdminWalletTransaction } from '@/services/adminWalletService';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { AdminFormLayout, ADMIN_FORM_GRID, FormField } from '@/components/admin';
 
 const safeString = (v: unknown) => String(v || '').trim();
 const shortId = (id: string) => (id.length > 10 ? `${id.slice(0, 6)}…${id.slice(-4)}` : id);
@@ -383,68 +380,67 @@ export default function Wallet() {
 								<Plus className="h-4 w-4 mr-2" />Add Credits
 							</Button>
 						</DialogTrigger>
-						<DialogContent className="sm:max-w-lg">
-							<DialogHeader>
-								<DialogTitle>Add credits to a user</DialogTitle>
-								<DialogDescription>
-									This increments the user wallet balance. Transaction logs are not yet stored server-side.
-								</DialogDescription>
-							</DialogHeader>
-
-							<div className="grid gap-4">
-								<div className="grid gap-2">
-									<div className="text-sm font-medium">User</div>
-									<Select value={creditUserId} onValueChange={setCreditUserId}>
-										<SelectTrigger>
-											<SelectValue placeholder="Select a user from this page" />
-										</SelectTrigger>
-										<SelectContent>
-											{items.map((u) => {
-												const id = safeString(u.userId);
-												const label = `${safeString(u.name) || '—'} • ${safeString(u.email) || '—'} • ${shortId(id)}`;
-												return (
-													<SelectItem key={id} value={id}>
-														{label}
-													</SelectItem>
-												);
-											})}
-										</SelectContent>
-									</Select>
+						<DialogContent className="max-w-5xl p-0">
+							<AdminFormLayout
+								title="Add credits to a user"
+								description="This increments the user wallet balance. Transaction logs are not yet stored server-side."
+								stickyActions
+								actions={
+									<>
+										<Button
+											variant="outline"
+											className="h-11 rounded-xl"
+											onClick={() => setCreditDialogOpen(false)}
+											disabled={creditSaving}
+										>
+											Cancel
+										</Button>
+										<Button
+											className="h-11 rounded-xl"
+											onClick={async () => {
+												const ok = await submitCredits(creditUserId, creditAmount, creditNote);
+												if (ok) {
+													setCreditAmount('');
+													setCreditNote('');
+													setCreditDialogOpen(false);
+												}
+											}}
+											disabled={creditSaving}
+										>
+											Add Credits
+										</Button>
+									</>
+								}
+							>
+								<div className="p-6">
+									<div className={ADMIN_FORM_GRID}>
+										<FormField label="User" required applyInputStyles={false}>
+											<Select value={creditUserId} onValueChange={setCreditUserId}>
+												<SelectTrigger className="h-11 rounded-xl px-4">
+													<SelectValue placeholder="Select a user from this page" />
+												</SelectTrigger>
+												<SelectContent>
+													{items.map((u) => {
+														const id = safeString(u.userId);
+														const label = `${safeString(u.name) || '—'} • ${safeString(u.email) || '—'} • ${shortId(id)}`;
+														return (
+															<SelectItem key={id} value={id}>
+																{label}
+															</SelectItem>
+														);
+													})}
+												</SelectContent>
+											</Select>
+										</FormField>
+										<FormField label="Amount" required>
+											<Input value={creditAmount} onChange={(e) => setCreditAmount(e.target.value)} placeholder="e.g. 250" />
+										</FormField>
+										<FormField label="Note (optional)">
+											<Input value={creditNote} onChange={(e) => setCreditNote(e.target.value)} placeholder="Internal note" />
+										</FormField>
+									</div>
 								</div>
-								<div className="grid gap-2">
-									<div className="text-sm font-medium">Amount</div>
-									<Input value={creditAmount} onChange={(e) => setCreditAmount(e.target.value)} placeholder="e.g. 250" />
-								</div>
-								<div className="grid gap-2">
-									<div className="text-sm font-medium">Note (optional)</div>
-									<Input value={creditNote} onChange={(e) => setCreditNote(e.target.value)} placeholder="Internal note" />
-								</div>
-							</div>
-
-							<DialogFooter>
-								<Button
-									variant="outline"
-									onClick={() => {
-										setCreditDialogOpen(false);
-									}}
-									disabled={creditSaving}
-								>
-									Cancel
-								</Button>
-								<Button
-									onClick={async () => {
-									const ok = await submitCredits(creditUserId, creditAmount, creditNote);
-									if (ok) {
-										setCreditAmount('');
-										setCreditNote('');
-										setCreditDialogOpen(false);
-									}
-								}}
-									disabled={creditSaving}
-								>
-									Add Credits
-								</Button>
-							</DialogFooter>
+							</AdminFormLayout>
 						</DialogContent>
 					</Dialog>
 				</div>

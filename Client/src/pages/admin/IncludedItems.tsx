@@ -7,12 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import {
 	Select,
 	SelectContent,
@@ -35,6 +30,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { adminIncludedItemsService } from '@/services/adminIncludedItemsService';
 import type { IncludedItemEntity, IncludedItemUnit } from '@/types/catalog';
+import { AdminFormLayout, ADMIN_FORM_GRID, FormField } from '@/components/admin';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
 
@@ -307,124 +303,130 @@ export default function AdminIncludedItems() {
 			</Card>
 
 			<Dialog open={createOpen} onOpenChange={setCreateOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>New Included Item</DialogTitle>
-						<DialogDescription>Create a new included item used by meals.</DialogDescription>
-					</DialogHeader>
-					<div className="grid gap-4">
-						<div className="grid gap-2">
-							<Label>Name</Label>
-							<Input value={createDraft.name || ''} onChange={(e) => setCreateDraft((d) => ({ ...d, name: e.target.value }))} />
-						</div>
-						<div className="grid gap-2">
-							<Label>Display Order</Label>
-							<Input
-								type="number"
-								value={String(createDraft.displayOrder ?? 0)}
-								onChange={(e) => setCreateDraft((d) => ({ ...d, displayOrder: Number(e.target.value) || 0 }))}
-							/>
-							<p className="text-xs text-muted-foreground">Lower numbers appear first.</p>
-						</div>
-						<div className="grid gap-2">
-							<Label>Slug (optional)</Label>
-							<Input value={createDraft.slug || ''} onChange={(e) => setCreateDraft((d) => ({ ...d, slug: e.target.value }))} />
-						</div>
-						<div className="grid gap-2">
-							<Label>Default Unit</Label>
-							<Select
-								value={(createDraft.defaultUnit || 'g') as string}
-								onValueChange={(v) => setCreateDraft((d) => ({ ...d, defaultUnit: v as IncludedItemUnit }))}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Select unit" />
-								</SelectTrigger>
-								<SelectContent>
-									{UNITS.map((u) => (
-										<SelectItem key={u} value={u}>
-											{u}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div className="grid gap-2">
-							<Label>Unit Type (optional)</Label>
-							<Input value={createDraft.unitType || ''} onChange={(e) => setCreateDraft((d) => ({ ...d, unitType: e.target.value }))} />
-						</div>
-						<div className="flex items-center justify-between rounded-md border p-3">
-							<div className="text-sm">
-								<div className="font-medium">Active</div>
-								<div className="text-muted-foreground">Controls visibility in selection lists</div>
+				<DialogContent className="max-w-5xl p-0">
+					<AdminFormLayout
+						title="New Included Item"
+						description="Create a new included item used by meals."
+						stickyActions
+						actions={
+							<>
+								<Button variant="outline" className="h-11 rounded-xl" onClick={() => setCreateOpen(false)} disabled={creating}>
+									Cancel
+								</Button>
+								<Button className="h-11 rounded-xl" onClick={submitCreate} disabled={creating}>
+									{creating ? 'Creating...' : 'Create'}
+								</Button>
+							</>
+						}
+					>
+						<div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+							<div className={ADMIN_FORM_GRID}>
+								<FormField label="Name" required>
+									<Input value={createDraft.name || ''} onChange={(e) => setCreateDraft((d) => ({ ...d, name: e.target.value }))} />
+								</FormField>
+								<FormField label="Display order" hint="Lower numbers appear first.">
+									<Input
+										type="number"
+										value={String(createDraft.displayOrder ?? 0)}
+										onChange={(e) => setCreateDraft((d) => ({ ...d, displayOrder: Number(e.target.value) || 0 }))}
+									/>
+								</FormField>
+								<FormField label="Slug (optional)">
+									<Input value={createDraft.slug || ''} onChange={(e) => setCreateDraft((d) => ({ ...d, slug: e.target.value }))} />
+								</FormField>
+								<FormField label="Default unit" applyInputStyles={false}>
+									<Select
+										value={(createDraft.defaultUnit || 'g') as string}
+										onValueChange={(v) => setCreateDraft((d) => ({ ...d, defaultUnit: v as IncludedItemUnit }))}
+									>
+										<SelectTrigger className="h-11 rounded-xl px-4">
+											<SelectValue placeholder="Select unit" />
+										</SelectTrigger>
+										<SelectContent>
+											{UNITS.map((u) => (
+												<SelectItem key={u} value={u}>
+													{u}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</FormField>
+								<FormField label="Unit type (optional)">
+									<Input value={createDraft.unitType || ''} onChange={(e) => setCreateDraft((d) => ({ ...d, unitType: e.target.value }))} />
+								</FormField>
+								<FormField label="Status" applyInputStyles={false}>
+									<div className="flex h-11 items-center justify-between rounded-xl border px-4">
+										<span className="text-sm text-muted-foreground">Controls visibility in selection lists</span>
+										<Switch checked={Boolean(createDraft.isActive)} onCheckedChange={(v) => setCreateDraft((d) => ({ ...d, isActive: v }))} />
+									</div>
+								</FormField>
 							</div>
-							<Switch checked={Boolean(createDraft.isActive)} onCheckedChange={(v) => setCreateDraft((d) => ({ ...d, isActive: v }))} />
 						</div>
-					</div>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
-						<Button onClick={submitCreate} disabled={creating}>{creating ? 'Creating...' : 'Create'}</Button>
-					</DialogFooter>
+					</AdminFormLayout>
 				</DialogContent>
 			</Dialog>
 
 			<Dialog open={editOpen} onOpenChange={setEditOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Edit Included Item</DialogTitle>
-						<DialogDescription>Update the included item fields.</DialogDescription>
-					</DialogHeader>
-					<div className="grid gap-4">
-						<div className="grid gap-2">
-							<Label>Name</Label>
-							<Input value={editDraft.name || ''} onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))} />
-						</div>
-						<div className="grid gap-2">
-							<Label>Display Order</Label>
-							<Input
-								type="number"
-								value={String(editDraft.displayOrder ?? 0)}
-								onChange={(e) => setEditDraft((d) => ({ ...d, displayOrder: Number(e.target.value) || 0 }))}
-							/>
-							<p className="text-xs text-muted-foreground">Lower numbers appear first.</p>
-						</div>
-						<div className="grid gap-2">
-							<Label>Slug</Label>
-							<Input value={editDraft.slug || ''} onChange={(e) => setEditDraft((d) => ({ ...d, slug: e.target.value }))} />
-						</div>
-						<div className="grid gap-2">
-							<Label>Default Unit</Label>
-							<Select
-								value={(editDraft.defaultUnit || 'g') as string}
-								onValueChange={(v) => setEditDraft((d) => ({ ...d, defaultUnit: v as IncludedItemUnit }))}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Select unit" />
-								</SelectTrigger>
-								<SelectContent>
-									{UNITS.map((u) => (
-										<SelectItem key={u} value={u}>
-											{u}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div className="grid gap-2">
-							<Label>Unit Type (optional)</Label>
-							<Input value={editDraft.unitType || ''} onChange={(e) => setEditDraft((d) => ({ ...d, unitType: e.target.value }))} />
-						</div>
-						<div className="flex items-center justify-between rounded-md border p-3">
-							<div className="text-sm">
-								<div className="font-medium">Active</div>
-								<div className="text-muted-foreground">Controls visibility in selection lists</div>
+				<DialogContent className="max-w-5xl p-0">
+					<AdminFormLayout
+						title="Edit Included Item"
+						description="Update the included item fields."
+						stickyActions
+						actions={
+							<>
+								<Button variant="outline" className="h-11 rounded-xl" onClick={() => setEditOpen(false)} disabled={saving}>
+									Cancel
+								</Button>
+								<Button className="h-11 rounded-xl" onClick={submitEdit} disabled={saving}>
+									{saving ? 'Saving...' : 'Save'}
+								</Button>
+							</>
+						}
+					>
+						<div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+							<div className={ADMIN_FORM_GRID}>
+								<FormField label="Name" required>
+									<Input value={editDraft.name || ''} onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))} />
+								</FormField>
+								<FormField label="Display order" hint="Lower numbers appear first.">
+									<Input
+										type="number"
+										value={String(editDraft.displayOrder ?? 0)}
+										onChange={(e) => setEditDraft((d) => ({ ...d, displayOrder: Number(e.target.value) || 0 }))}
+									/>
+								</FormField>
+								<FormField label="Slug">
+									<Input value={editDraft.slug || ''} onChange={(e) => setEditDraft((d) => ({ ...d, slug: e.target.value }))} />
+								</FormField>
+								<FormField label="Default unit" applyInputStyles={false}>
+									<Select
+										value={(editDraft.defaultUnit || 'g') as string}
+										onValueChange={(v) => setEditDraft((d) => ({ ...d, defaultUnit: v as IncludedItemUnit }))}
+									>
+										<SelectTrigger className="h-11 rounded-xl px-4">
+											<SelectValue placeholder="Select unit" />
+										</SelectTrigger>
+										<SelectContent>
+											{UNITS.map((u) => (
+												<SelectItem key={u} value={u}>
+													{u}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</FormField>
+								<FormField label="Unit type (optional)">
+									<Input value={editDraft.unitType || ''} onChange={(e) => setEditDraft((d) => ({ ...d, unitType: e.target.value }))} />
+								</FormField>
+								<FormField label="Status" applyInputStyles={false}>
+									<div className="flex h-11 items-center justify-between rounded-xl border px-4">
+										<span className="text-sm text-muted-foreground">Controls visibility in selection lists</span>
+										<Switch checked={Boolean(editDraft.isActive)} onCheckedChange={(v) => setEditDraft((d) => ({ ...d, isActive: v }))} />
+									</div>
+								</FormField>
 							</div>
-							<Switch checked={Boolean(editDraft.isActive)} onCheckedChange={(v) => setEditDraft((d) => ({ ...d, isActive: v }))} />
 						</div>
-					</div>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setEditOpen(false)} disabled={saving}>Cancel</Button>
-						<Button onClick={submitEdit} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
-					</DialogFooter>
+					</AdminFormLayout>
 				</DialogContent>
 			</Dialog>
 		</div>

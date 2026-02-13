@@ -92,7 +92,12 @@ const computeDeliveryFromLocation = ({ latitude, longitude }) => {
 const getByoConfig = async () => {
   let cfg = await BuildYourOwnConfig.findOne({}).lean();
   if (!cfg) {
-    cfg = await BuildYourOwnConfig.create({ minimumWeeklyOrderAmount: 0, minimumMonthlyOrderAmount: 0 });
+		cfg = await BuildYourOwnConfig.create({
+			minimumWeeklyOrderAmount: 0,
+			minimumMonthlyOrderAmount: 0,
+			maximumWeeklyOrderAmount: 0,
+			maximumMonthlyOrderAmount: 0,
+		});
     cfg = cfg.toObject({ versionKey: false });
   }
   return cfg;

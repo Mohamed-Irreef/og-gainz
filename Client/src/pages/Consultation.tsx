@@ -35,6 +35,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { consultationService } from '@/services';
 import { useToast } from '@/hooks/use-toast';
 import { businessContact } from '@/config/contact';
+import { useSafeBack } from '@/hooks/use-safe-back';
 
 // Extended types for the consultation form
 type FitnessGoalExtended = 
@@ -110,6 +111,7 @@ const foodPreferenceOptions = [
 const Consultation = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const handleBack = useSafeBack('/');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -190,6 +192,16 @@ const Consultation = () => {
         <div className="absolute inset-0 bg-oz-primary/70" />
         
         <div className="container mx-auto px-4 relative z-10">
+          <div className="mb-6">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="inline-flex items-center text-sm text-white/90 hover:text-white transition-colors"
+            >
+              <ArrowRight className="mr-2 h-4 w-4 rotate-180" />
+              Back
+            </button>
+          </div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

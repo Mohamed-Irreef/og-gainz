@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { ENV } = require('./config/env.config');
 const routes = require('./routes/index.routes');
+const adminSettingsRoutes = require('./routes/admin.settings.routes');
 const { errorHandler } = require('./middlewares/error.middleware');
 const logger = require('./utils/logger.util');
 
@@ -50,6 +51,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api', routes);
+app.use('/api/admin/settings', adminSettingsRoutes);
 
 // 404 handler - catches all unmatched routes
 app.use((req, res, next) => {
