@@ -311,7 +311,7 @@ function TrayPreview({
 				</div>
 			</CardHeader>
 			<CardContent className="pt-5">
-				<div className="relative overflow-hidden rounded-2xl border-2 border-oz-neutral/40 bg-gradient-to-br from-white via-oz-neutral/5 to-oz-neutral/10 p-5 sm:p-6 shadow-inner">
+				<div className="relative overflow-hidden rounded-2xl border-2 border-oz-neutral/40 bg-gradient-to-br from-white via-oz-neutral/5 to-oz-neutral/10 p-4 sm:p-6 shadow-inner">
 					<div className="absolute top-0 right-0 w-32 h-32 bg-oz-accent/5 rounded-full blur-3xl" />
 					<div className="absolute bottom-0 left-0 w-32 h-32 bg-oz-primary/5 rounded-full blur-3xl" />
 					<div className="relative">
@@ -651,8 +651,8 @@ export default function BuildYourOwn() {
 				<CardTitle className="text-base font-semibold text-oz-primary md:text-lg">Live Summary</CardTitle>
 				<div className="text-xs text-muted-foreground">Totals and order rules are computed by the server.</div>
 			</CardHeader>
-			<CardContent className="space-y-4">
-				<div className="rounded-2xl border bg-oz-neutral/5 p-4">
+									<CardContent className="space-y-4 p-4 md:p-6">
+										<div className="rounded-2xl border bg-oz-neutral/5 p-4 md:p-5">
 					<div className="flex items-start justify-between gap-3">
 						<div>
 							<div className="text-xs text-muted-foreground">Mode</div>
@@ -817,7 +817,7 @@ export default function BuildYourOwn() {
 										<Button
 											variant="ghost"
 											size="icon"
-											className="h-8 w-8"
+											className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
 											onClick={() =>
 												setSelections((prev) => {
 													const { [item.itemId]: _, ...rest } = prev;
@@ -838,7 +838,7 @@ export default function BuildYourOwn() {
 
 				<div className="relative">
 					<Button
-						className={justAdded ? 'w-full bg-green-600 hover:bg-green-600/90 text-sm font-semibold transition-all' : 'w-full bg-oz-secondary hover:bg-oz-secondary/90 text-sm font-semibold transition-all'}
+						className={justAdded ? 'w-full bg-green-600 hover:bg-green-600/90 text-sm font-semibold text-white hover:text-white transition-all' : 'w-full bg-oz-secondary hover:bg-oz-secondary/90 text-sm font-semibold text-white hover:text-white transition-all'}
 						disabled={
 							!hasSelections ||
 							quoteLoading ||
@@ -946,7 +946,7 @@ export default function BuildYourOwn() {
 				</div>
 			</section>
 
-			<section className="py-8 md:py-10 bg-oz-neutral/30">
+			<section className="py-6 md:py-10 bg-oz-neutral/30">
 				<div className="container mx-auto px-4">
 					{error ? (
 						<div className="rounded-2xl border bg-white p-6">
@@ -975,7 +975,7 @@ export default function BuildYourOwn() {
 							</div>
 
 							{/* Center Column - Ingredients Selection */}
-							<div className="order-1 xl:order-2 space-y-5">
+							<div className="order-1 xl:order-2 space-y-6">
 								<Card className="border-oz-neutral/40 bg-gradient-to-br from-white to-oz-neutral/5 shadow-lg">
 									<CardHeader className="pb-4 border-b border-oz-neutral/30">
 										<div className="flex items-center gap-3">
@@ -988,13 +988,13 @@ export default function BuildYourOwn() {
 											</div>
 										</div>
 									</CardHeader>
-									<CardContent className="pt-5">
+									<CardContent className="p-4 md:p-6">
 										{loading ? (
 											<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 												{Array.from({ length: 6 }).map((_, i) => (
 													<div key={i} className="rounded-2xl border border-oz-neutral/50 bg-white overflow-hidden shadow-sm">
 														<div className="aspect-[4/3] w-full bg-oz-neutral/20 animate-pulse" />
-														<div className="p-4 space-y-3">
+														<div className="p-4 md:p-6 space-y-3">
 															<div className="h-4 w-2/3 bg-oz-neutral/20 rounded animate-pulse" />
 															<div className="h-3 w-full bg-oz-neutral/10 rounded animate-pulse" />
 															<div className="h-9 w-full bg-oz-neutral/20 rounded-xl animate-pulse" />
@@ -1005,7 +1005,7 @@ export default function BuildYourOwn() {
 										) : activeItemTypes.length === 0 ? (
 											<div className="text-sm text-muted-foreground">No Build-your-own categories available yet.</div>
 										) : (
-											<Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)}>
+												<Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)}>
 												<div className="bg-gradient-to-r from-oz-neutral/20 via-oz-neutral/10 to-oz-neutral/20 rounded-xl p-3 mb-5">
 													<div className="overflow-x-auto whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 														<TabsList className="flex w-max gap-2 bg-transparent p-0" role="tablist">
@@ -1070,7 +1070,7 @@ export default function BuildYourOwn() {
 																					) : null}
 																				</div>
 
-																						<div className="flex flex-1 flex-col px-5 py-4">
+																						<div className="flex flex-1 flex-col px-4 py-4 md:px-5">
 																							<div className="min-w-0">
 																									<div className="text-[18px] font-semibold leading-tight text-oz-primary truncate">{item.name}</div>
 																									<div className="mt-2 flex items-center gap-2">
@@ -1098,7 +1098,7 @@ export default function BuildYourOwn() {
 																											</div>
 																									) : null}
 																								</div>
-																								<div className="mt-3 flex items-start justify-between gap-3">
+																								<div className="mt-4 flex items-start justify-between gap-3">
 																									<div>
 																										<div className="text-xl font-semibold leading-none text-oz-primary">{formatCurrency(unitPrice)}</div>
 																										<div className="mt-1 text-[12px] font-medium text-oz-primary/55">
@@ -1131,7 +1131,7 @@ export default function BuildYourOwn() {
 									</CardContent>
 								</Card>
 
-								<div className="rounded-2xl border border-oz-neutral/50 bg-white p-5 shadow-sm">
+								<div className="rounded-2xl border border-oz-neutral/50 bg-white p-4 md:p-6 shadow-sm">
 									<div className="flex items-start gap-3">
 										<div className="mt-0.5 h-9 w-9 rounded-xl bg-oz-secondary/10 flex items-center justify-center">
 											<Sparkles className="h-5 w-5 text-oz-secondary" />
@@ -1139,11 +1139,9 @@ export default function BuildYourOwn() {
 										<div>
 											<div className="text-base font-semibold text-oz-primary">Minimum order rules</div>
 											<div className="text-sm leading-relaxed text-muted-foreground mt-1">
-												Weekly minimum: {formatCurrency(config?.minimumWeeklyOrderAmount || 0)} · Weekly maximum:{' '}
-												{toNumber(config?.maximumWeeklyOrderAmount) > 0 ? formatCurrency(toNumber(config?.maximumWeeklyOrderAmount)) : 'No maximum'}
+												Weekly: Min {formatCurrency(config?.minimumWeeklyOrderAmount || 0)}
 												<br />
-												Monthly minimum: {formatCurrency(config?.minimumMonthlyOrderAmount || 0)} · Monthly maximum:{' '}
-												{toNumber(config?.maximumMonthlyOrderAmount) > 0 ? formatCurrency(toNumber(config?.maximumMonthlyOrderAmount)) : 'No maximum'}
+												Monthly: Min {formatCurrency(config?.minimumMonthlyOrderAmount || 0)}
 											</div>
 										</div>
 									</div>
@@ -1180,7 +1178,7 @@ export default function BuildYourOwn() {
 				</div>
 			</section>
 
-		<div className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t bg-white/90 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-lg backdrop-blur-md">
+		<div className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t bg-white/90 px-4 py-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-lg backdrop-blur-md">
 			<div className="flex items-center justify-between gap-4">
 				<div className="min-w-0">
 					<div className="text-xs text-muted-foreground">Total</div>

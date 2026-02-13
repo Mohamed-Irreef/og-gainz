@@ -13,6 +13,7 @@ import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { useSafeBack } from '@/hooks/use-safe-back';
 import type { Meal } from '@/types/catalog';
+import { cn } from '@/lib/utils';
 
 const NO_SPACE_UNITS = new Set(['g', 'kg', 'mg', 'ml', 'l', 'oz']);
 const UNIT_SINGULAR_OVERRIDES: Record<string, string> = {
@@ -457,28 +458,38 @@ const MealPackDetails = () => {
 									) : (
 										<>
 											{showProteinChoice ? (
-											<div className="flex flex-col gap-4 rounded-xl border border-oz-primary/15 bg-white p-3 md:flex-row md:items-center md:justify-between">
-												<div className="text-sm font-semibold text-oz-primary">Protein option</div>
-												<div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
-													<Button
-														variant={proteinChoice === 'with' ? 'default' : 'outline'}
-														size="sm"
-														className={`w-full rounded-xl text-sm font-semibold ${proteinChoice === 'with' ? 'bg-oz-secondary hover:bg-oz-secondary/90' : ''}`}
-														onClick={() => setProteinChoice('with')}
-													>
-														With protein
-													</Button>
-													<Button
-														variant={proteinChoice === 'without' ? 'default' : 'outline'}
-														size="sm"
-														className={`w-full rounded-xl text-sm font-semibold ${proteinChoice === 'without' ? 'bg-oz-secondary hover:bg-oz-secondary/90' : ''}`}
-														onClick={() => setProteinChoice('without')}
-													>
-														Without protein
-													</Button>
+												<div className="flex flex-col gap-4 rounded-xl border border-oz-primary/15 bg-white/80 p-3 md:flex-row md:items-center md:justify-between">
+													<div className="text-sm font-semibold text-oz-primary">Protein option</div>
+													<div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+														<Button
+															variant={proteinChoice === 'with' ? 'default' : 'outline'}
+															size="sm"
+															className={cn(
+																"w-full rounded-xl text-sm font-semibold transition-all",
+																proteinChoice === 'with'
+																	? 'bg-oz-secondary text-white shadow-md hover:bg-oz-secondary/90'
+																	: 'border-oz-primary/15 bg-white hover:bg-oz-neutral/10 hover:text-oz-primary'
+															)}
+															onClick={() => setProteinChoice('with')}
+														>
+															With protein
+														</Button>
+														<Button
+															variant={proteinChoice === 'without' ? 'default' : 'outline'}
+															size="sm"
+															className={cn(
+																"w-full rounded-xl text-sm font-semibold transition-all",
+																proteinChoice === 'without'
+																	? 'bg-oz-secondary text-white shadow-md hover:bg-oz-secondary/90'
+																	: 'border-oz-primary/15 bg-white hover:bg-oz-neutral/10 hover:text-oz-primary'
+															)}
+															onClick={() => setProteinChoice('without')}
+														>
+															Without protein
+														</Button>
+													</div>
 												</div>
-											</div>
-										) : null}
+											) : null}
 
 											{pricingUnavailable ? (
 												<div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-oz-primary">
@@ -487,17 +498,23 @@ const MealPackDetails = () => {
 											) : null}
 
 										<Tabs value={selectedPlan} onValueChange={(v) => setSelectedPlan(v as typeof selectedPlan)} className="w-full">
-											<TabsList className="grid w-full grid-cols-3 rounded-xl bg-muted/60 p-1">
-												<TabsTrigger value="monthly" className="text-xs font-semibold md:text-sm">
+											<TabsList className="grid w-full grid-cols-3 rounded-full border border-oz-primary/10 bg-oz-neutral/20 p-1 shadow-inner">
+												<TabsTrigger
+													value="monthly"
+													className="rounded-full text-xs font-semibold transition-all md:text-sm hover:bg-white/70 hover:text-oz-primary data-[state=active]:bg-white data-[state=active]:text-oz-primary data-[state=active]:shadow-md"
+												>
 													Monthly
 												</TabsTrigger>
-												<TabsTrigger value="weekly" className="text-xs font-semibold md:text-sm">
+												<TabsTrigger
+													value="weekly"
+													className="rounded-full text-xs font-semibold transition-all md:text-sm hover:bg-white/70 hover:text-oz-primary data-[state=active]:bg-white data-[state=active]:text-oz-primary data-[state=active]:shadow-md"
+												>
 													Weekly
 												</TabsTrigger>
 													<TabsTrigger
 														value="trial"
 														disabled={!effectivePricing?.trial || !meal?.isTrialEligible}
-														className="text-xs font-semibold md:text-sm"
+														className="rounded-full text-xs font-semibold transition-all md:text-sm hover:bg-white/70 hover:text-oz-primary data-[state=active]:bg-white data-[state=active]:text-oz-primary data-[state=active]:shadow-md"
 													>
 													Trial
 												</TabsTrigger>

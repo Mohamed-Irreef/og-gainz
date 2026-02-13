@@ -22,7 +22,7 @@ const Cart = () => {
 	const walletBalance = user?.walletBalance || 0;
 
 	const [creditsToApplyLocal, setCreditsToApplyLocal] = useState(0);
-	const [addressText, setAddressText] = useState(state.deliveryLocation?.address ?? '');
+	const [addressText] = useState(state.deliveryLocation?.address ?? '');
 
 	const quoteByCartItemId = useMemo(() => {
 		const map = new Map<string, (typeof quote.items)[number]>();
@@ -87,6 +87,19 @@ const Cart = () => {
 	};
 
 	const isTrialRepeatError = (quoteError || '').toLowerCase().includes('trial already used');
+	const hasLocation = Boolean(state.deliveryLocation?.latitude != null && state.deliveryLocation?.longitude != null);
+	const totalServings = useMemo(() => {
+		return state.items.reduce((sum, item) => {
+			const metaServings = (item as { meta?: { subscriptionServings?: number } }).meta?.subscriptionServings;
+			if (typeof metaServings === 'number' && metaServings > 0) return sum + metaServings;
+			if (item.plan === 'weekly') return sum + 5;
+			if (item.plan === 'monthly') return sum + 20;
+			return sum + Math.max(1, item.quantity || 1);
+		}, 0);
+	}, [state.items]);
+	const baseDeliveryFee = quote?.deliveryFee ?? 0;
+	const computedDeliveryFee = hasLocation && quote ? baseDeliveryFee * totalServings : 0;
+	const computedTotal = quote ? quote.subtotal + computedDeliveryFee - (quote.creditsApplied || 0) : 0;
 
 	if (state.items.length === 0) {
 		return (
@@ -125,10 +138,10 @@ const Cart = () => {
 				</div>
 			</div>
 
-			<div className="container mx-auto px-4 py-8">
-				<h1 className="text-3xl font-bold text-oz-primary mb-8">Your Cart</h1>
+			<div className="container mx-auto px-4 py-6 md:py-8">
+				<h1 className="text-3xl font-bold text-oz-primary mb-6">Your Cart</h1>
 
-				<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 					<div className="lg:col-span-2 space-y-4">
 						{state.items.map((item) => {
 							const q = quoteByCartItemId.get(item.id);
@@ -181,35 +194,7 @@ const Cart = () => {
 					</div>
 
 					<div className="lg:col-span-1">
-						<div className="sticky top-24 space-y-4">
-							<Card>
-								<CardHeader className="pb-3">
-									<CardTitle className="text-base flex items-center gap-2">
-										<MapPin className="h-4 w-4 text-oz-secondary" />
-										Delivery Location
-									</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<div className="space-y-3">
-										<Input placeholder="Address (optional)" value={addressText} onChange={(e) => setAddressText(e.target.value)} />
-										<Button variant="outline" onClick={handleGetCurrentLocation}>Get Current Location</Button>
-										{state.deliveryLocation?.latitude != null && state.deliveryLocation?.longitude != null ? (
-											<div className="text-xs text-muted-foreground">
-												Detected: {state.deliveryLocation.latitude.toFixed(5)}, {state.deliveryLocation.longitude.toFixed(5)}
-											</div>
-										) : (
-											<div className="text-xs text-muted-foreground">
-												No location set yet. Delivery fee will be quoted once location is available.
-											</div>
-										)}
-										<div className="text-xs text-muted-foreground">
-											{quote?.distanceKm != null ? `Distance: ${quote.distanceKm} km` : 'Distance: —'}
-											{' • '}
-											{quote ? (quote.deliveryFee === 0 ? 'Delivery: Free' : `Delivery: ${formatCurrency(quote.deliveryFee)}`) : 'Delivery: —'}
-										</div>
-									</div>
-								</CardContent>
-							</Card>
+						<div className="sticky top-24 space-y-6">
 
 							{isAuthenticated && walletBalance > 0 && (
 								<Card>
@@ -219,7 +204,7 @@ const Cart = () => {
 											Wallet Credits
 										</CardTitle>
 									</CardHeader>
-									<CardContent>
+									<CardContent className="p-4 md:p-6">
 										<p className="text-sm text-muted-foreground mb-3">
 											Available: <span className="font-semibold text-oz-primary">{formatCurrency(walletBalance)}</span>
 										</p>
@@ -237,7 +222,29 @@ const Cart = () => {
 								<CardHeader className="bg-oz-secondary/5">
 									<CardTitle className="text-oz-primary">Order Summary</CardTitle>
 								</CardHeader>
-								<CardContent className="pt-4">
+								<CardContent className="p-4 md:p-6">
+									<div className="mb-4 rounded-lg border border-oz-neutral/40 bg-oz-neutral/10 p-3">
+										<div className="flex flex-col gap-2">
+											<div className="flex items-center gap-2 text-sm font-medium text-oz-primary">
+												<MapPin className="h-4 w-4 text-oz-secondary" />
+												Get Current Location
+											</div>
+											<p className="text-xs text-muted-foreground">
+												Location is required to calculate delivery fees.
+											</p>
+											<Button variant="outline" onClick={handleGetCurrentLocation} className="w-full">
+												Get Current Location
+											</Button>
+											{hasLocation && quote?.distanceKm != null ? (
+												<div className="text-xs text-muted-foreground">
+													Detected: {state.deliveryLocation?.latitude?.toFixed(5)}, {state.deliveryLocation?.longitude?.toFixed(5)}
+												</div>
+											) : null}
+											<div className="text-xs text-muted-foreground">
+												{quote?.distanceKm != null ? `Distance: ${quote.distanceKm} km` : 'Distance: —'}
+											</div>
+										</div>
+									</div>
 									{quoteError && (
 										<div className={isTrialRepeatError ? "mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3" : "mb-3 text-sm text-destructive"}>
 											{isTrialRepeatError ? (
@@ -262,13 +269,19 @@ const Cart = () => {
 											<span className="text-muted-foreground">Subtotal</span>
 											<span>{quote ? formatCurrency(quote.subtotal) : '—'}</span>
 										</div>
-												<div className="flex justify-between text-sm">
-													<span className="text-muted-foreground">Distance</span>
-														<span>{quote?.distanceKm != null ? `${quote.distanceKm} km from OG Gainz Kitchen` : '—'}</span>
-												</div>
+										<div className="flex justify-between text-sm">
+											<span className="text-muted-foreground">Distance</span>
+											<span>{quote?.distanceKm != null ? `${quote.distanceKm} km from OG Gainz Kitchen` : '—'}</span>
+										</div>
 										<div className="flex justify-between text-sm">
 											<span className="text-muted-foreground">Delivery Fee</span>
-											<span>{quote ? (quote.deliveryFee === 0 ? <span className="text-green-600">Free</span> : formatCurrency(quote.deliveryFee)) : '—'}</span>
+											<span>
+												{quote && hasLocation
+													? computedDeliveryFee === 0
+														? <span className="text-green-600">Free</span>
+														: formatCurrency(computedDeliveryFee)
+													: '—'}
+											</span>
 										</div>
 										{quote && quote.creditsApplied > 0 && (
 											<div className="flex justify-between text-sm text-green-600">
@@ -279,11 +292,15 @@ const Cart = () => {
 										<Separator />
 										<div className="flex justify-between font-semibold text-lg">
 											<span className="text-oz-primary">Total</span>
-											<span className="text-oz-accent">{quote ? formatCurrency(quote.total) : '—'}</span>
+											<span className="text-oz-accent">{quote ? formatCurrency(computedTotal) : '—'}</span>
 										</div>
 									</div>
 
-									<Button onClick={handleCheckout} className="w-full mt-6 bg-oz-accent hover:bg-oz-accent/90 h-12 text-lg" disabled={isQuoting || (quote ? !quote.isServiceable : false)}>
+									<Button
+										onClick={handleCheckout}
+										className="w-full mt-6 bg-oz-accent hover:bg-oz-accent/90 h-12 text-lg"
+										disabled={isQuoting || !hasLocation || (quote ? !quote.isServiceable : false)}
+									>
 										Proceed to Order Details
 										<ArrowRight className="ml-2 h-5 w-5" />
 									</Button>

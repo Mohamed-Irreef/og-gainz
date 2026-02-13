@@ -28,19 +28,19 @@ export function MealPackCard({ pack, variant = "default", className }: MealPackC
       style={{ minHeight: 420 }}
     >
       {/* Image Section */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden">
+      <div className="relative aspect-[4/3] w-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-oz-primary/10 via-oz-secondary/10 to-oz-accent/10">
         {pack.image?.url ? (
           <img
             src={pack.image.url}
             alt={pack.image.alt || pack.name}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 rounded-t-2xl"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
             loading="lazy"
           />
         ) : (
-          <div className="h-full w-full flex items-center justify-center bg-oz-neutral/30 text-muted-foreground text-xs">Image coming soon</div>
+          <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">Image coming soon</div>
         )}
         {/* Gradient overlay */}
-        <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
         {/* Floating badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
           <ProteinBadge grams={pack.proteinPerMeal} tier={pack.tier} className="shadow-md" />

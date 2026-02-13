@@ -1,7 +1,7 @@
 import { memo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Flame, Zap } from 'lucide-react';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -53,36 +53,34 @@ export const MealCard = memo(function MealCard({ meal, className, priceTier = 'w
 				className
 			)}
 		>
-			<CardHeader className="p-0">
-				<div className="relative w-full aspect-[4/3] overflow-hidden rounded-t-2xl bg-gradient-to-br from-oz-primary/10 via-oz-secondary/10 to-oz-accent/10">
-					{primaryImage?.url ? (
-						<img
-							src={primaryImage.url}
-							alt={primaryImage.alt || meal.name}
-							loading="lazy"
-							className="block h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-						/>
-					) : (
-						<div className="h-full w-full flex items-center justify-center">
-							<div className="text-xs text-muted-foreground">Image coming soon</div>
-						</div>
-					)}
+			<div className="relative w-full aspect-[4/3] overflow-hidden rounded-t-2xl bg-gradient-to-br from-oz-primary/10 via-oz-secondary/10 to-oz-accent/10">
+				{primaryImage?.url ? (
+					<img
+						src={primaryImage.url}
+						alt={primaryImage.alt || meal.name}
+						loading="lazy"
+						className="block h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+					/>
+				) : (
+					<div className="h-full w-full flex items-center justify-center">
+						<div className="text-xs text-muted-foreground">Image coming soon</div>
+					</div>
+				)}
 
-					{/* Subtle bottom gradient for readability */}
-					<div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
+				{/* Subtle bottom gradient for readability */}
+				<div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
 
-					{meal.isFeatured && (
-						<div className="absolute top-3 left-3 rounded-full bg-oz-accent text-white text-xs px-3 py-1 font-medium shadow">
-							Popular
-						</div>
-					)}
-					{meal.isTrialEligible && (
-						<div className="absolute top-3 right-3 rounded-full bg-oz-primary text-white text-xs px-3 py-1 font-medium shadow">
-							{meal.trialBadgeText || 'Trial'}
-						</div>
-					)}
-				</div>
-			</CardHeader>
+				{meal.isFeatured && (
+					<div className="absolute top-3 left-3 rounded-full bg-oz-accent text-white text-xs px-3 py-1 font-medium shadow">
+						Popular
+					</div>
+				)}
+				{meal.isTrialEligible && (
+					<div className="absolute top-3 right-3 rounded-full bg-oz-primary text-white text-xs px-3 py-1 font-medium shadow">
+						{meal.trialBadgeText || 'Trial'}
+					</div>
+				)}
+			</div>
 
 			<CardContent className="p-4 sm:p-5 flex-1 flex flex-col">
 				<div className="flex items-start justify-between gap-3">

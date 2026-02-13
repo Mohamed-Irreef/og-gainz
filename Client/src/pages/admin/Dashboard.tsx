@@ -90,7 +90,7 @@ const StatCard = ({ title, value, icon: Icon, trend, trendUp, color, badgeText }
       transition={{ duration: 0.3 }}
     >
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-4 md:p-6">
           <div className="flex items-center justify-between">
             <div>
 				<div className="flex items-center gap-2 mb-1">
@@ -209,7 +209,7 @@ const AdminDashboard = () => {
       {loading
         ? [0, 1, 2, 3].map((i) => (
             <Card key={i}>
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
                     <Skeleton className="h-4 w-28" />

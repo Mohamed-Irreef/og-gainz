@@ -15,7 +15,7 @@ function Providers({ children }: { children: React.ReactNode }) {
 
 createRoot(document.getElementById("root")!).render(
 	<Providers>
-		<BrowserRouter>
+		<BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
 			<ScrollToTop />
 			<UserProvider>
 				<CartProvider>

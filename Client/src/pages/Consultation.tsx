@@ -218,7 +218,7 @@ const Consultation = () => {
         </div>
       </section>
 
-      <div className="container max-w-xl mx-auto px-4 py-8 md:py-12">
+      <div className="container max-w-xl mx-auto px-4 py-6 md:py-12">
         <AnimatePresence mode="wait">
           {isSubmitted ? (
             /* Success State */
@@ -230,7 +230,7 @@ const Consultation = () => {
               transition={{ duration: 0.3 }}
             >
               <Card className="shadow-lg border-0">
-                <CardContent className="pt-12 pb-8 px-6 text-center">
+                <CardContent className="py-10 px-4 md:px-6 text-center">
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
@@ -276,7 +276,7 @@ const Consultation = () => {
               transition={{ duration: 0.4 }}
             >
               <Card className="shadow-lg border-0">
-                <CardContent className="pt-6 pb-8 px-5 md:px-8">
+                <CardContent className="py-6 px-4 md:px-6">
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     {/* Full Name */}
                     <div className="space-y-2">
@@ -489,7 +489,7 @@ const Consultation = () => {
 
       <div className="container mx-auto px-4 pb-12">
         <Card className="bg-oz-neutral/30 border-oz-neutral/50">
-          <CardContent className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h3 className="text-lg font-semibold text-oz-primary mb-1">Prefer to talk to us directly?</h3>
               <p className="text-sm text-muted-foreground mb-4">
