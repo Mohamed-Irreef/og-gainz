@@ -1044,16 +1044,16 @@ export default function BuildYourOwn() {
 																						: qty > 0
 																								? 'border-oz-primary/20 shadow-md'
 																								: 'border-oz-primary/10 shadow-sm'
-																						) + ' rounded-[22px] bg-gradient-to-br from-oz-neutral/10 via-white to-oz-primary/5 transition-all duration-300 will-change-transform hover:shadow-lg hover:-translate-y-1'
+																				) + ' h-full flex flex-col rounded-2xl bg-white shadow-sm transition-all duration-200 md:hover:-translate-y-1 md:hover:shadow-lg md:hover:border-oz-primary/20'
 																			}
 																		>
-																				<CardContent className="relative p-0 overflow-hidden rounded-[22px] group flex h-full flex-col">
-																					<div className="relative aspect-video w-full overflow-hidden rounded-t-[22px] bg-gradient-to-br from-oz-primary/10 via-oz-secondary/10 to-oz-accent/10">
+																				<CardContent className="relative p-0 overflow-hidden rounded-2xl group flex h-full flex-col">
+																					<div className="relative h-44 w-full overflow-hidden rounded-t-2xl bg-gradient-to-br from-oz-primary/10 via-oz-secondary/10 to-oz-accent/10">
 																					{item.image?.url ? (
 																						<img
 																							src={item.image.url}
 																								alt={item.image.alt || item.name}
-																									className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.08]"
+																							className="h-full w-full object-cover transition-transform duration-300 md:group-hover:scale-[1.02]"
 																								loading="lazy"
 																							/>
 																					) : (
@@ -1061,47 +1061,41 @@ export default function BuildYourOwn() {
 																							<ImageIcon className="h-6 w-6 text-muted-foreground" />
 																						</div>
 																					)}
-																							<div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/65 via-black/20 to-transparent" />
+																						<div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
 																					{highProtein ? (
-																								<span className="absolute top-2.5 right-2.5 rounded-full bg-oz-primary text-white px-2.5 py-1 text-[11px] font-semibold shadow">High Protein</span>
+																						<span className="absolute top-2.5 right-2.5 rounded-full bg-emerald-100 text-emerald-900 px-2.5 py-1 text-[11px] font-semibold shadow-sm">High Protein</span>
 																					) : null}
 																					{disabled ? (
 																								<span className="absolute top-2.5 left-2.5 rounded-full bg-black/60 text-white px-2.5 py-1 text-[11px] font-semibold">Unavailable</span>
 																					) : null}
 																				</div>
 
-																						<div className="flex flex-1 flex-col px-4 py-4 md:px-5">
-																							<div className="min-w-0">
-																									<div className="text-[18px] font-semibold leading-tight text-oz-primary truncate">{item.name}</div>
-																									<div className="mt-2 flex items-center gap-2">
-																										<span className="inline-flex items-center rounded-full border border-oz-primary/50 bg-oz-primary/85 px-2 py-0.5 text-[11px] font-semibold text-white">
-																											{formatQtyUnit(item.quantityValue, item.quantityUnit)}
-																										</span>
-																										{typeof item.proteinGrams === 'number' || typeof item.calories === 'number' ? (
-																											<div className="flex min-w-0 items-center gap-2 whitespace-nowrap">
-																												{typeof item.proteinGrams === 'number' ? (
-																													<span className="inline-flex items-center gap-1 rounded-full border border-oz-primary/50 bg-oz-primary/85 px-2 py-0.5 text-[11px] font-semibold text-white">
-																														<Dumbbell className="h-3 w-3 text-white" />
-																														{item.proteinGrams}g
-																													</span>
-																												) : null}
-																												{typeof item.proteinGrams === 'number' && typeof item.calories === 'number' ? (
-																												<span className="text-oz-primary/25">•</span>
-																												) : null}
-																												{typeof item.calories === 'number' ? (
-																													<span className="inline-flex items-center gap-1 rounded-full border border-oz-primary/50 bg-oz-primary/85 px-2 py-0.5 text-[11px] font-semibold text-white">
-																														<Flame className="h-3 w-3 text-white" />
-																														{item.calories}
-																														<span className="ml-0.5 text-[11px] font-medium text-white/80">kcal</span>
-																													</span>
-																												) : null}
-																											</div>
-																									) : null}
-																								</div>
-																								<div className="mt-4 flex items-start justify-between gap-3">
+																					<div className="flex flex-1 flex-col px-5 py-5 md:px-6">
+																						<div className="min-w-0 flex flex-1 flex-col">
+																							<div className="text-[16px] md:text-[18px] font-semibold leading-tight text-oz-primary truncate">
+																								{item.name}
+																							</div>
+																							<div className="mt-2 flex flex-wrap items-center gap-2">
+																								<span className="inline-flex items-center rounded-full border border-oz-primary/15 bg-oz-neutral/20 px-2.5 py-1 text-[12px] font-medium text-oz-primary">
+																									{formatQtyUnit(item.quantityValue, item.quantityUnit)}
+																								</span>
+																								{typeof item.proteinGrams === 'number' ? (
+																									<span className="inline-flex items-center gap-1 rounded-full border border-oz-secondary/20 bg-oz-secondary/10 px-2.5 py-1 text-[12px] font-medium text-oz-primary">
+																										<Dumbbell className="h-3.5 w-3.5 text-oz-secondary" />
+																										{item.proteinGrams}g
+																									</span>
+																								) : null}
+																								{typeof item.calories === 'number' ? (
+																									<span className="inline-flex items-center gap-1 rounded-full border border-oz-accent/15 bg-oz-accent/10 px-2.5 py-1 text-[12px] font-medium text-oz-primary">
+																										<Flame className="h-3.5 w-3.5 text-oz-accent" />
+																										{item.calories} kcal
+																									</span>
+																								) : null}
+																							</div>
+																							<div className="mt-auto pt-5 flex items-start justify-between gap-3">
 																									<div>
-																										<div className="text-xl font-semibold leading-none text-oz-primary">{formatCurrency(unitPrice)}</div>
-																										<div className="mt-1 text-[12px] font-medium text-oz-primary/55">
+																								<div className="text-2xl font-semibold leading-none text-oz-primary">{formatCurrency(unitPrice)}</div>
+																								<div className="mt-1 text-[12px] font-medium text-muted-foreground">
 																											{mode === 'monthly' ? 'per month' : mode === 'weekly' ? 'per week' : 'per order'}
 																										</div>
 																									</div>
