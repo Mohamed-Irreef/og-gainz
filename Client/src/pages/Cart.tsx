@@ -88,6 +88,7 @@ const Cart = () => {
 
 	const isTrialRepeatError = (quoteError || '').toLowerCase().includes('trial already used');
 	const hasLocation = Boolean(state.deliveryLocation?.latitude != null && state.deliveryLocation?.longitude != null);
+	const ordersPaused = true;
 	const totalServings = useMemo(() => {
 		return state.items.reduce((sum, item) => {
 			const metaServings = (item as { meta?: { subscriptionServings?: number } }).meta?.subscriptionServings;
@@ -296,10 +297,16 @@ const Cart = () => {
 										</div>
 									</div>
 
+									{ordersPaused && (
+										<div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+											Orders will be taken from 18 Feb 2026.
+										</div>
+									)}
+
 									<Button
 										onClick={handleCheckout}
 										className="w-full mt-6 bg-oz-accent hover:bg-oz-accent/90 h-12 text-lg"
-										disabled={isQuoting || !hasLocation || (quote ? !quote.isServiceable : false)}
+										disabled={ordersPaused || isQuoting || !hasLocation || (quote ? !quote.isServiceable : false)}
 									>
 										Proceed to Order Details
 										<ArrowRight className="ml-2 h-5 w-5" />

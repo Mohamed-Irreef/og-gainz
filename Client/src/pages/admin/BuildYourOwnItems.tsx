@@ -36,6 +36,7 @@ import { adminBuildYourOwnItemsService } from '@/services/adminBuildYourOwnItems
 import { adminBuildYourOwnItemTypesService } from '@/services/adminBuildYourOwnItemTypesService';
 import type { BuildYourOwnItemEntity, BuildYourOwnItemTypeEntity, BuildYourOwnQuantityUnit } from '@/types/buildYourOwn';
 import { AdminFormLayout, ADMIN_FORM_GRID, FormField } from '@/components/admin';
+import { ImageDropzone } from '@/components/shared/ImageDropzone';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
 
@@ -86,6 +87,7 @@ export default function AdminBuildYourOwnItems() {
 	const [editDraft, setEditDraft] = useState<Draft>(emptyDraft());
 	const [saving, setSaving] = useState(false);
 	const [uploadingImage, setUploadingImage] = useState(false);
+	const [editImageFile, setEditImageFile] = useState<File | null>(null);
 
 	const hasNextPage = useRef(false);
 
@@ -147,6 +149,7 @@ export default function AdminBuildYourOwnItems() {
 
 	const openEdit = (item: BuildYourOwnItemEntity) => {
 		setEditItem(item);
+		setEditImageFile(null);
 		setEditDraft({
 			name: item.name,
 			itemTypeId: item.itemTypeId,
@@ -278,6 +281,7 @@ export default function AdminBuildYourOwnItems() {
 		try {
 			await adminBuildYourOwnItemsService.uploadImage(editItem.id, file);
 			toast({ title: 'Image updated' });
+			setEditImageFile(null);
 			await fetchItems();
 		} catch (e) {
 			toast({ title: 'Failed to upload image', description: e instanceof Error ? e.message : undefined, variant: 'destructive' });
@@ -515,7 +519,11 @@ export default function AdminBuildYourOwnItems() {
 								</FormField>
 
 								<FormField label="Image (required)" hint="One image per item (Cloudinary)." className="md:col-span-2">
-									<Input type="file" accept="image/*" onChange={(e) => setCreateDraft((d) => ({ ...d, _imageFile: e.target.files?.[0] || null }))} />
+									<ImageDropzone
+										value={createDraft._imageFile || null}
+										onChange={(file) => setCreateDraft((d) => ({ ...d, _imageFile: file }))}
+										disabled={creating}
+									/>
 								</FormField>
 
 								<FormField label="Status" applyInputStyles={false} className="md:col-span-2">
@@ -627,15 +635,21 @@ export default function AdminBuildYourOwnItems() {
 									</FormField>
 
 									<FormField label="Replace image" hint="Current image is shown in the list. Upload replaces it." className="md:col-span-2">
-										<Input
-											type="file"
-											accept="image/*"
+										<ImageDropzone
+											value={editImageFile}
+											onChange={setEditImageFile}
 											disabled={uploadingImage}
-											onChange={(e) => {
-												const file = e.target.files?.[0];
-												if (file) replaceImage(file);
-											}}
 										/>
+										<div className="flex justify-end">
+											<Button
+												variant="outline"
+												className="h-11 rounded-xl"
+												disabled={!editImageFile || uploadingImage}
+												onClick={() => editImageFile && replaceImage(editImageFile)}
+											>
+												{uploadingImage ? 'Uploading…' : 'Upload image'}
+											</Button>
+										</div>
 									</FormField>
 
 									<FormField label="Status" applyInputStyles={false} className="md:col-span-2">
