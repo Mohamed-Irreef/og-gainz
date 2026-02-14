@@ -136,6 +136,33 @@ export const userService = {
     }
   },
 
+  // Phase 2B: Google OAuth (access-token flow for custom UI)
+  async loginWithGoogleAccessToken(accessToken: string): Promise<User> {
+    await delay(100);
+
+    type GoogleLoginResponse = {
+      status: 'success' | 'error';
+      token: string;
+      user: AuthUserPayload;
+    };
+
+    const result = await apiJson<GoogleLoginResponse>('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ accessToken }),
+    });
+
+    authTokenStorage.set(result.token);
+    try {
+      const me = await this.getMe();
+      return me;
+    } catch {
+      const normalized = normalizeAuthUser(result.user);
+      currentUser = normalized;
+      localStorage.setItem('oz-gainz-user', JSON.stringify(normalized));
+      return normalized;
+    }
+  },
+
   async verify(): Promise<User> {
     await delay(75);
 

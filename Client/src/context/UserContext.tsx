@@ -8,6 +8,7 @@ interface UserContextType {
   isLoading: boolean;
   login: (email: string, name?: string) => Promise<User>;
   loginWithGoogle: (idToken: string) => Promise<User>;
+  loginWithGoogleAccessToken: (accessToken: string) => Promise<User>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
 }
@@ -67,6 +68,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const loginWithGoogleAccessToken = async (accessToken: string) => {
+    setIsLoading(true);
+    try {
+      const loggedInUser = await userService.loginWithGoogleAccessToken(accessToken);
+      setUser(loggedInUser);
+      return loggedInUser;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     await userService.logout();
     setUser(null);
@@ -86,6 +98,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       isLoading,
       login,
       loginWithGoogle,
+      loginWithGoogleAccessToken,
       logout,
       updateProfile,
     }}>

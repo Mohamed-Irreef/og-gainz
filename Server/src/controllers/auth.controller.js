@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 
 const { ENV } = require('../config/env.config');
-const { verifyGoogleToken } = require('../config/googleOAuth.config');
+const { verifyGoogleToken, verifyGoogleAccessToken } = require('../config/googleOAuth.config');
 const User = require('../models/User.model');
 
 const buildUserResponse = (user) => ({
@@ -82,13 +82,16 @@ const login = async (req, res, next) => {
 
 const google = async (req, res, next) => {
   try {
-    const { idToken } = req.body ?? {};
+    const { idToken, accessToken } = req.body ?? {};
 
-    const payload = await verifyGoogleToken(idToken);
+    const payload = idToken
+      ? await verifyGoogleToken(idToken)
+      : await verifyGoogleAccessToken(accessToken);
+
     const email = payload.email;
     const name = payload.name;
-    const avatar = payload.picture;
-    const googleId = payload.sub;
+    const avatar = payload.picture || payload.avatar;
+    const googleId = payload.sub || payload.id;
 
     if (!email || typeof email !== 'string' || email.trim().length === 0) {
       return res.status(400).json({
