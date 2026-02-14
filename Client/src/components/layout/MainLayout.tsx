@@ -124,8 +124,8 @@ export function MainLayout() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Link to="/login">
-                  <Button className="bg-oz-accent hover:bg-oz-accent/90 text-white">
+                <Link to="/login" className="shrink-0">
+                  <Button size="sm" className="h-10 min-w-[96px] px-5 rounded-lg bg-oz-accent text-white hover:bg-oz-accent/90 hover:text-white shadow-sm hover:shadow-md">
                     Login
                   </Button>
                 </Link>
