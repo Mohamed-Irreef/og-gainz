@@ -49,6 +49,12 @@ const normalizeSubscriptionDays = ({ subscriptionType, trialDays }) => {
   return 1;
 };
 
+const formatInr = (value) => {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return 'INR 0.00';
+  return `INR ${n.toFixed(2)}`;
+};
+
 const computeDeliveryFees = ({ distanceKm, costPerKm, deliveriesPerDay, subscriptionDays }) => {
   const distance = Math.max(0, toNumber(distanceKm));
   const perKm = Math.max(0, toNumber(costPerKm));
@@ -109,7 +115,7 @@ const buildManualOrderBillHtml = ({ manualOrder, billId }) => {
         <td class="center">Meal</td>
         <td class="center">${escapeHtml(plan)}${escapeHtml(timeLabel)}</td>
         <td class="right">${Number(item.quantity || 0)}</td>
-        <td class="right">INR ${Number(item.line_total || 0)}</td>
+        <td class="right">${formatInr(item.line_total || 0)}</td>
       </tr>
     `;
   }).join('');
@@ -124,7 +130,7 @@ const buildManualOrderBillHtml = ({ manualOrder, billId }) => {
         <td class="center">Add-on</td>
         <td class="center">${escapeHtml(plan)}${escapeHtml(timeLabel)}</td>
         <td class="right">${Number(item.quantity || 0)}</td>
-        <td class="right">INR ${Number(item.line_total || 0)}</td>
+        <td class="right">${formatInr(item.line_total || 0)}</td>
       </tr>
     `;
   }).join('');
@@ -209,10 +215,10 @@ const buildManualOrderBillHtml = ({ manualOrder, billId }) => {
       </table>
 
       <div class="totals">
-        <div><span>Meal cost</span><span>INR ${Number(manualOrder.meal_cost || 0)}</span></div>
-        <div><span>Add-on cost</span><span>INR ${Number(manualOrder.addon_cost || 0)}</span></div>
-        <div><span>Total delivery fees</span><span>INR ${Number(manualOrder.delivery_cost_total || 0)}</span></div>
-        <div class="grand"><span>Total fees</span><span>INR ${Number(manualOrder.grand_total || 0)}</span></div>
+        <div><span>Meal cost</span><span>${formatInr(manualOrder.meal_cost || 0)}</span></div>
+        <div><span>Add-on cost</span><span>${formatInr(manualOrder.addon_cost || 0)}</span></div>
+        <div><span>Total delivery fees</span><span>${formatInr(manualOrder.delivery_cost_total || 0)}</span></div>
+        <div class="grand"><span>Total fees</span><span>${formatInr(manualOrder.grand_total || 0)}</span></div>
       </div>
 
       <div class="no-print">
