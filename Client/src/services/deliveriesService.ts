@@ -7,6 +7,7 @@ export type MyDelivery = {
 	id?: string;
 	date: string;
 	time: string;
+	deliveryShift?: 'MORNING' | 'AFTERNOON' | 'EVENING';
 	subscriptionId?: string;
 	address?: {
 		label?: string;

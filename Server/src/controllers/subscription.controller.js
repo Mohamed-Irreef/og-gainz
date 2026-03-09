@@ -7,6 +7,14 @@ const DailyDelivery = require('../models/DailyDelivery.model');
 const CustomMealSubscription = require('../models/CustomMealSubscription.model');
 const AddonSubscription = require('../models/AddonSubscription.model');
 const { getEffectiveApprovedPauses } = require('../utils/pauseSkip.util');
+const {
+  getShiftMeta,
+  normalizeShift,
+  resolveShiftFromTime,
+  buildKolkataDateTime,
+  getNowKolkata,
+  getKolkataISODate,
+} = require('../utils/deliveryShift.util');
 
 const requireAuthUserId = (req) => {
   const userId = req?.user?.id || req?.user?._id;
@@ -38,13 +46,7 @@ const parseISODate = (value, fieldName) => {
   return `${String(y).padStart(4, '0')}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 };
 
-const localTodayISO = () => {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-};
+const localTodayISO = () => getKolkataISODate();
 
 const parseHHmm = (value) => {
   const s = String(value || '').trim();
@@ -357,18 +359,18 @@ const requestSkipDelivery = async (req, res, next) => {
       }
     }
 
-    const now = new Date();
-    const scheduled = getLocalScheduledDateTime(deliveryDate, delivery.time);
-    if (!scheduled) {
-      return res.status(400).json({ status: 'error', message: 'Delivery scheduled time is unavailable for this delivery' });
+    const now = getNowKolkata();
+    const shiftKey = normalizeShift(delivery.deliveryShift) || resolveShiftFromTime(delivery.deliveryTime || delivery.time);
+    const meta = getShiftMeta(shiftKey);
+    if (!meta) {
+      return res.status(400).json({ status: 'error', message: 'Delivery shift is unavailable for this delivery' });
     }
-    const skipCutoffMinutes = typeof ENV.SKIP_REQUEST_CUTOFF_MINUTES === 'number' && ENV.SKIP_REQUEST_CUTOFF_MINUTES > 0
-      ? Math.floor(ENV.SKIP_REQUEST_CUTOFF_MINUTES)
-      : 120;
-    const cutoff = new Date(scheduled);
-    cutoff.setMinutes(cutoff.getMinutes() - skipCutoffMinutes);
+    const cutoff = buildKolkataDateTime(deliveryDate, meta.skipCutoff);
+    if (!cutoff) {
+      return res.status(400).json({ status: 'error', message: 'Delivery cutoff time is unavailable for this delivery' });
+    }
     if (now.getTime() >= cutoff.getTime()) {
-      return res.status(400).json({ status: 'error', message: `Skip requests must be made at least ${formatCutoff(skipCutoffMinutes)} before delivery.` });
+      return res.status(400).json({ status: 'error', message: `Skip requests must be made before ${meta.skipCutoff} (Asia/Kolkata) for ${meta.label} shift.` });
     }
 
     // Deduplicate: one pending skip request per delivery.

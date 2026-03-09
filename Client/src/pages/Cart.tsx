@@ -89,17 +89,8 @@ const Cart = () => {
 	const isTrialRepeatError = (quoteError || '').toLowerCase().includes('trial already used');
 	const hasLocation = Boolean(state.deliveryLocation?.latitude != null && state.deliveryLocation?.longitude != null);
 	const ordersPaused = true;
-	const totalServings = useMemo(() => {
-		return state.items.reduce((sum, item) => {
-			const metaServings = (item as { meta?: { subscriptionServings?: number } }).meta?.subscriptionServings;
-			if (typeof metaServings === 'number' && metaServings > 0) return sum + metaServings;
-			if (item.plan === 'weekly') return sum + 5;
-			if (item.plan === 'monthly') return sum + 20;
-			return sum + Math.max(1, item.quantity || 1);
-		}, 0);
-	}, [state.items]);
 	const baseDeliveryFee = quote?.deliveryFee ?? 0;
-	const computedDeliveryFee = hasLocation && quote ? baseDeliveryFee * totalServings : 0;
+	const computedDeliveryFee = hasLocation && quote ? baseDeliveryFee : 0;
 	const computedTotal = quote ? quote.subtotal + computedDeliveryFee - (quote.creditsApplied || 0) : 0;
 
 	if (state.items.length === 0) {

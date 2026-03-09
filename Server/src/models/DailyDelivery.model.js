@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const { resolveShiftFromTime, normalizeShift } = require('../utils/deliveryShift.util');
+
 const DELIVERY_STATUSES = ['PENDING', 'COOKING', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'SKIPPED'];
 
 const parseISODateToStartOfDay = (iso) => {
@@ -95,6 +97,18 @@ const DailyDeliverySchema = new mongoose.Schema(
 			},
 			index: true,
 		},
+		deliveryShift: {
+			type: String,
+			required: false,
+			enum: ['MORNING', 'AFTERNOON', 'EVENING'],
+			default: function () {
+				return (
+					normalizeShift(this.deliveryShift) ||
+					resolveShiftFromTime(this.deliveryTime || this.time)
+				);
+			},
+			index: true,
+		},
 
 		userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
 		// Phase 6D linking fields (do not remove legacy source* fields)
@@ -114,7 +128,12 @@ const DailyDeliverySchema = new mongoose.Schema(
 			default: function () {
 				const d = this.deliveryDate || parseISODateToStartOfDay(this.date);
 				const dateKey = d && !Number.isNaN(new Date(d).getTime()) ? new Date(d).toISOString().slice(0, 10) : String(this.date || '').trim();
-				const timeKey = this.deliveryTime || normalizeHHmm(this.time) || String(this.time || '').trim();
+				const timeKey =
+					normalizeShift(this.deliveryShift) ||
+					resolveShiftFromTime(this.deliveryTime || this.time) ||
+					this.deliveryTime ||
+					normalizeHHmm(this.time) ||
+					String(this.time || '').trim();
 				const userKey = this.userId ? String(this.userId) : '';
 				return [userKey, dateKey, timeKey].filter(Boolean).join('|');
 			},
@@ -135,6 +154,7 @@ const DailyDeliverySchema = new mongoose.Schema(
 );
 
 DailyDeliverySchema.index({ date: 1, time: 1, userId: 1 });
+DailyDeliverySchema.index({ deliveryDate: 1, deliveryShift: 1, status: 1 });
 DailyDeliverySchema.index({ deliveryDate: 1, deliveryTime: 1, status: 1 });
 DailyDeliverySchema.index({ userId: 1, deliveryDate: 1 });
 DailyDeliverySchema.index({ sourceOrderId: 1, date: 1, sourceCartItemId: 1 }, { unique: true });

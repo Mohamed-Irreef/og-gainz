@@ -21,6 +21,7 @@ export type PublicOrderItem = {
 	orderDetails?: {
 		startDate?: string;
 		deliveryTime?: string;
+		deliveryShift?: 'MORNING' | 'AFTERNOON' | 'EVENING';
 		immediateDelivery?: boolean;
 	};
 };

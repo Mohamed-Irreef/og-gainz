@@ -14,6 +14,7 @@ export type KitchenDelivery = {
 	// Phase 6D canonical
 	deliveryDate?: string;
 	deliveryTime?: string;
+	deliveryShift?: 'MORNING' | 'AFTERNOON' | 'EVENING';
 	groupKey?: string;
 
 	userId?: string;

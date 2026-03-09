@@ -11,6 +11,7 @@ export { default as AdminBuildYourOwnItems } from './BuildYourOwnItems';
 export { default as AdminBuildYourOwnConfig } from './BuildYourOwnConfig';
 
 export { default as AdminOrders } from './Orders';
+export { default as AdminManualOrderPage } from './AdminManualOrderPage';
 export { default as AdminOrderDetails } from './OrderDetails';
 export { default as AdminKitchen } from './Kitchen';
 export { default as AdminSubscriptions } from './Subscriptions';

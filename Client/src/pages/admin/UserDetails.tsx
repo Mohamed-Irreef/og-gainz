@@ -39,6 +39,7 @@ import {
 	type AdminUserWallet,
 } from '@/services/adminUsersService';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { formatShiftLabel, normalizeShift, resolveShiftFromTime } from '@/utils/deliveryShift';
 
 const safeString = (v: unknown) => String(v || '').trim();
 
@@ -449,7 +450,14 @@ export default function UserDetails() {
 									{(deliveries?.upcoming || []).slice(0, 5).map((d) => (
 										<div key={d.id} className="rounded border p-3 flex items-center justify-between">
 											<div className="text-sm">
-												<div className="font-medium">{d.date || '—'} {d.time ? `• ${d.time}` : ''}</div>
+												<div className="font-medium">
+													{d.date || '—'}
+													{normalizeShift(d.deliveryShift) || resolveShiftFromTime(d.time)
+														? ` • ${formatShiftLabel(normalizeShift(d.deliveryShift) || resolveShiftFromTime(d.time))}`
+														: d.time
+															? ` • ${d.time}`
+															: ''}
+												</div>
 												<div className="text-xs text-muted-foreground">Items: {d.itemsCount ?? 0}</div>
 											</div>
 											<Badge variant="outline" className="bg-muted/40">{safeString(d.status) || '—'}</Badge>

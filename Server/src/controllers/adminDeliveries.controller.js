@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const DailyDelivery = require('../models/DailyDelivery.model');
 const logger = require('../utils/logger.util');
+const { normalizeShift, resolveShiftFromTime, getShiftSortIndex } = require('../utils/deliveryShift.util');
 
 const DELIVERY_STATUSES = ['PENDING', 'COOKING', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'SKIPPED'];
 
@@ -25,6 +26,16 @@ const adminListDailyDeliveries = async (req, res, next) => {
 		if (!date) return res.status(400).json({ status: 'error', message: 'date is required (YYYY-MM-DD)' });
 
 		const deliveries = await DailyDelivery.find({ date }).sort({ time: 1, createdAt: 1 }).lean();
+		deliveries.sort((a, b) => {
+			const shiftA = normalizeShift(a.deliveryShift) || resolveShiftFromTime(a.deliveryTime || a.time);
+			const shiftB = normalizeShift(b.deliveryShift) || resolveShiftFromTime(b.deliveryTime || b.time);
+			const shiftCmp = getShiftSortIndex(shiftA) - getShiftSortIndex(shiftB);
+			if (shiftCmp !== 0) return shiftCmp;
+			const timeA = String(a.deliveryTime || a.time || '').trim();
+			const timeB = String(b.deliveryTime || b.time || '').trim();
+			if (timeA && timeB && timeA !== timeB) return timeA.localeCompare(timeB);
+			return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+		});
 		return res.json({ status: 'success', data: deliveries });
 	} catch (err) {
 		return next(err);

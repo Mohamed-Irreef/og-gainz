@@ -32,6 +32,7 @@ export type AdminSubscription = {
 	// order-derived (meal pack / BYO)
 	title?: string;
 	orderId?: string;
+	deliveryShift?: 'MORNING' | 'AFTERNOON' | 'EVENING';
 
 	// customMeal
 	selections?: Array<{ componentId: string; quantity: number }>;

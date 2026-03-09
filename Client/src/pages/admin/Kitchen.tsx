@@ -40,6 +40,13 @@ import type { BuildYourOwnItemEntity } from '@/types/buildYourOwn';
 import type { PauseSkipRequest } from '@/types';
 
 import { AlertCircle, Ban, ChefHat, CheckCircle2, ClipboardList, Package, Pause, Truck } from 'lucide-react';
+import {
+	DELIVERY_SHIFT_META,
+	formatShiftLabel,
+	getShiftSortIndex,
+	normalizeShift,
+	resolveShiftFromTime,
+} from '@/utils/deliveryShift';
 
 const safeString = (v: unknown) => String(v || '').trim();
 
@@ -126,15 +133,20 @@ const nextStatusFrom = (status: KitchenDeliveryStatus): KitchenDeliveryStatus | 
 	return flow[idx + 1];
 };
 
-const getDeliveryTimeLabel = (d: KitchenDelivery) => safeString(d.deliveryTime) || safeString(d.time) || '—';
+const getDeliveryShiftKey = (d: KitchenDelivery) =>
+	normalizeShift(d.deliveryShift) || resolveShiftFromTime(d.deliveryTime || d.time);
+const getDeliveryShiftLabel = (d: KitchenDelivery) => {
+	const key = getDeliveryShiftKey(d);
+	return key ? formatShiftLabel(key) : safeString(d.deliveryTime) || safeString(d.time) || '—';
+};
 const getDeliveryDateLabel = (d: KitchenDelivery) => safeString(d.date) || safeString(d.deliveryDate) || '';
 const getGroupKey = (d: KitchenDelivery) => {
 	const key = safeString(d.groupKey);
 	if (key) return key;
 	const userId = safeString(d.userId || d.user?.id);
 	const date = getDeliveryDateLabel(d);
-	const time = getDeliveryTimeLabel(d);
-	return [userId, date, time].filter(Boolean).join('|');
+	const shift = getDeliveryShiftKey(d) || getDeliveryShiftLabel(d);
+	return [userId, date, shift].filter(Boolean).join('|');
 };
 
 const isImmediateDelivery = (d: KitchenDelivery) =>
@@ -321,15 +333,15 @@ export default function Kitchen() {
 	}, [deliveries]);
 
 	const timeline = useMemo(() => {
-		const byTime = new Map<string, KitchenDelivery[]>();
+		const byShift = new Map<string, KitchenDelivery[]>();
 		for (const d of deliveries) {
-			const t = getDeliveryTimeLabel(d);
-			if (!byTime.has(t)) byTime.set(t, []);
-			byTime.get(t)!.push(d);
+			const shiftKey = getDeliveryShiftKey(d) || 'UNKNOWN';
+			if (!byShift.has(shiftKey)) byShift.set(shiftKey, []);
+			byShift.get(shiftKey)!.push(d);
 		}
-		const sortedTimes = Array.from(byTime.keys()).sort((a, b) => a.localeCompare(b));
-		return sortedTimes.map((t) => {
-			const list = byTime.get(t) || [];
+		const sortedKeys = Array.from(byShift.keys()).sort((a, b) => getShiftSortIndex(a) - getShiftSortIndex(b));
+		return sortedKeys.map((shiftKey) => {
+			const list = byShift.get(shiftKey) || [];
 			const byGroup = new Map<string, KitchenDelivery[]>();
 			for (const d of list) {
 				const key = getGroupKey(d);
@@ -344,7 +356,7 @@ export default function Kitchen() {
 					return { key, deliveries: arr, userName, immediate };
 				})
 				.sort((a, b) => Number(b.immediate) - Number(a.immediate) || a.userName.localeCompare(b.userName));
-			return { time: t, groups };
+			return { shiftKey, groups };
 		});
 	}, [deliveries]);
 
@@ -520,9 +532,14 @@ export default function Kitchen() {
 						<div className="py-10 text-center text-sm text-muted-foreground">No deliveries scheduled for this day.</div>
 					) : (
 						<div className="space-y-3">
-							{timeline.map((slot) => (
-								<div key={slot.time} className="space-y-2">
-									<div className="text-sm font-semibold text-oz-primary">{slot.time}</div>
+							{timeline.map((slot) => {
+								const meta = DELIVERY_SHIFT_META[slot.shiftKey as keyof typeof DELIVERY_SHIFT_META];
+								return (
+									<div key={slot.shiftKey} className="space-y-2">
+										<div className="flex items-center gap-2 text-sm font-semibold text-oz-primary">
+											<span>{meta ? `${meta.icon} ${meta.label} Shift` : formatShiftLabel(slot.shiftKey)}</span>
+											{meta ? <span className="text-xs text-muted-foreground">{meta.windowLabel}</span> : null}
+										</div>
 									<div className="space-y-3">
 										{slot.groups.map((g) => {
 											const first = g.deliveries[0];
@@ -691,9 +708,10 @@ export default function Kitchen() {
 												</Card>
 											);
 										})}
+										</div>
 									</div>
-								</div>
-							))}
+								);
+							})}
 						</div>
 					)}
 				</CardContent>
@@ -748,7 +766,7 @@ export default function Kitchen() {
 								</CardHeader>
 								<CardContent className="space-y-1 text-sm">
 									<div className="flex items-center justify-between"><span className="text-muted-foreground">Date</span><span>{getDeliveryDateLabel(viewDelivery) || '—'}</span></div>
-									<div className="flex items-center justify-between"><span className="text-muted-foreground">Time</span><span>{getDeliveryTimeLabel(viewDelivery) || '—'}</span></div>
+															<div className="flex items-center justify-between"><span className="text-muted-foreground">Shift</span><span>{getDeliveryShiftLabel(viewDelivery) || '—'}</span></div>
 									<div className="flex items-center justify-between"><span className="text-muted-foreground">Customer</span><span>{safeString(viewDelivery.user?.name) || '—'}</span></div>
 								</CardContent>
 							</Card>

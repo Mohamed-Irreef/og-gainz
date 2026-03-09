@@ -77,6 +77,7 @@ export type AdminUserDelivery = {
 	id: string;
 	date?: string;
 	time?: string;
+	deliveryShift?: 'MORNING' | 'AFTERNOON' | 'EVENING';
 	status?: string;
 	itemsCount?: number;
 };

@@ -28,6 +28,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [quoteError, setQuoteError] = useState<string | null>(null);
 
   const itemCount = useMemo(() => state.items.length, [state.items]);
+  const orderDetailsKey = useMemo(() => JSON.stringify(state.orderDetailsByItemId || {}), [state.orderDetailsByItemId]);
 
   const addItem = (item: CartItemInput) => {
     setState(cartService.addItem(item));
@@ -99,7 +100,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     // Keep totals server-truth. Quote whenever cart inputs change.
     void refreshQuote();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.items, state.creditsToApply, state.deliveryLocation?.latitude, state.deliveryLocation?.longitude]);
+  }, [state.items, state.creditsToApply, state.deliveryLocation?.latitude, state.deliveryLocation?.longitude, orderDetailsKey]);
 
   return (
     <CartContext.Provider value={{

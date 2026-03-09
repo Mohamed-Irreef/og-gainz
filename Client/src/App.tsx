@@ -42,6 +42,7 @@ import {
   AdminBuildYourOwnItems,
   AdminBuildYourOwnConfig,
   AdminOrders,
+  AdminManualOrderPage,
   AdminOrderDetails,
   AdminSubscriptions,
   AdminKitchen,
@@ -284,6 +285,14 @@ export default function App() {
           handle={{
             title: 'Orders',
             description: 'Review orders, confirm payments, and manage kitchen flow.',
+          }}
+        />
+		<Route
+          path="manual-orders"
+          element={<AdminManualOrderPage />}
+          handle={{
+            title: 'Manual Orders',
+            description: 'Create phone/WhatsApp orders quickly and send bills to customers.',
           }}
         />
 		<Route

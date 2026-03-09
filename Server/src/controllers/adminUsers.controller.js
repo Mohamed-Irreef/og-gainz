@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const User = require('../models/User.model');
 const Order = require('../models/Order.model');
+const { normalizeShift, resolveShiftFromTime, getShiftSortIndex } = require('../utils/deliveryShift.util');
 const DailyDelivery = require('../models/DailyDelivery.model');
 const CustomMealSubscription = require('../models/CustomMealSubscription.model');
 const AddonSubscription = require('../models/AddonSubscription.model');
@@ -341,30 +342,47 @@ const getUserDeliveriesSummary = async (req, res, next) => {
 			DailyDelivery.find({ userId: uid, date: todayIso })
 				.sort({ deliveryTime: 1, time: 1 })
 				.limit(50)
-				.select({ date: 1, time: 1, status: 1, items: 1 })
+				.select({ date: 1, time: 1, deliveryShift: 1, deliveryTime: 1, status: 1, items: 1 })
 				.lean(),
 			DailyDelivery.find({ userId: uid, deliveryDate: { $gt: today, $lte: in7 } })
 				.sort({ deliveryDate: 1, deliveryTime: 1, time: 1 })
 				.limit(50)
-				.select({ date: 1, time: 1, status: 1, items: 1 })
+				.select({ date: 1, time: 1, deliveryShift: 1, deliveryTime: 1, status: 1, items: 1 })
 				.lean(),
 			DailyDelivery.countDocuments({ userId: uid, status: 'SKIPPED', deliveryDate: { $gte: today } }),
 		]);
 
+		const sortByShift = (list) => {
+			const arr = Array.isArray(list) ? list.slice() : [];
+			arr.sort((a, b) => {
+				const shiftA = normalizeShift(a.deliveryShift) || resolveShiftFromTime(a.deliveryTime || a.time);
+				const shiftB = normalizeShift(b.deliveryShift) || resolveShiftFromTime(b.deliveryTime || b.time);
+				const shiftCmp = getShiftSortIndex(shiftA) - getShiftSortIndex(shiftB);
+				if (shiftCmp !== 0) return shiftCmp;
+				const timeA = String(a.deliveryTime || a.time || '').trim();
+				const timeB = String(b.deliveryTime || b.time || '').trim();
+				if (timeA && timeB && timeA !== timeB) return timeA.localeCompare(timeB);
+				return 0;
+			});
+			return arr;
+		};
+
 		return res.json({
 			status: 'success',
 			data: {
-				today: (todayItems || []).map((d) => ({
+				today: sortByShift(todayItems || []).map((d) => ({
 					id: String(d._id),
 					date: d.date,
 					time: d.time,
+					deliveryShift: d.deliveryShift,
 					status: d.status,
 					itemsCount: Array.isArray(d.items) ? d.items.length : 0,
 				})),
-				upcoming: (upcomingItems || []).map((d) => ({
+				upcoming: sortByShift(upcomingItems || []).map((d) => ({
 					id: String(d._id),
 					date: d.date,
 					time: d.time,
+					deliveryShift: d.deliveryShift,
 					status: d.status,
 					itemsCount: Array.isArray(d.items) ? d.items.length : 0,
 				})),

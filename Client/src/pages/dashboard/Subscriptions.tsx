@@ -43,6 +43,7 @@ import type { PublicOrder, PublicOrderItem } from "@/types/ordersPhase5b";
 import { normalizeOrderFlags } from "@/types/ordersPhase5b";
 import type { Addon, AddonServings, Meal } from "@/types/catalog";
 import type { BuildYourOwnItemEntity } from "@/types/buildYourOwn";
+import { formatShiftLabel, normalizeShift, resolveShiftFromTime } from "@/utils/deliveryShift";
 
 const Subscriptions = () => {
   const { user } = useUser();
@@ -55,6 +56,10 @@ const Subscriptions = () => {
   };
 
   const safeString = (v: unknown) => String(v ?? '').trim();
+  const formatDeliveryShift = (shift?: string, time?: string) => {
+    const key = normalizeShift(shift) || resolveShiftFromTime(time);
+    return key ? formatShiftLabel(key) : (safeString(time) || '—');
+  };
   const [orders, setOrders] = useState<PublicOrder[]>([]);
   const [customMealSubscriptions, setCustomMealSubscriptions] = useState<CustomMealSubscription[]>([]);
   const [addonSubscriptions, setAddonSubscriptions] = useState<AddonSubscription[]>([]);
@@ -676,7 +681,7 @@ const Subscriptions = () => {
 		scheduleEndDate: scheduleEndDate || undefined,
 		nextServingDate: nextServingDate || undefined,
 		cycleEndDate: scheduleEndDate || cycleEndWeekdayISO,
-      deliveryTime: safeString(orderItem?.orderDetails?.deliveryTime),
+      deliveryShift: normalizeShift(orderItem?.orderDetails?.deliveryShift) || resolveShiftFromTime(orderItem?.orderDetails?.deliveryTime),
     };
   };
 
@@ -750,7 +755,7 @@ const Subscriptions = () => {
     type: PublicOrderItem['type'];
     quantity: number;
     startDate?: string;
-    deliveryTime?: string;
+		deliveryShift?: string;
     createdAt: string;
   };
 
@@ -783,7 +788,7 @@ const Subscriptions = () => {
           type: it.type,
           quantity: typeof it.quantity === 'number' ? it.quantity : 1,
           startDate: it.orderDetails?.startDate,
-          deliveryTime: it.orderDetails?.deliveryTime,
+          deliveryShift: it.orderDetails?.deliveryShift,
           createdAt: safeString(o.createdAt),
         });
       }
@@ -1115,7 +1120,7 @@ const Subscriptions = () => {
                 if (existing) {
                   items.push({
                     date: safeString(existing.date),
-                    time: safeString(existing.time) || servingProgress.deliveryTime || '—',
+                    time: formatDeliveryShift(existing.deliveryShift, existing.time) || formatDeliveryShift(servingProgress.deliveryShift),
                     status: safeString(existing.status) || 'PENDING',
                     id: safeString(existing.id),
                     isPlaceholder: false,
@@ -1123,7 +1128,7 @@ const Subscriptions = () => {
                 } else {
                   items.push({
                     date: cursor,
-                    time: servingProgress.deliveryTime || '—',
+                    time: formatDeliveryShift(servingProgress.deliveryShift),
                     status: 'SCHEDULED',
                     isPlaceholder: true,
                   });
@@ -1171,8 +1176,8 @@ const Subscriptions = () => {
                     <div className="text-sm font-medium">
                       {servingProgress.cycleStartDate || '—'} → {servingProgress.scheduleEndDate || servingProgress.cycleEndDate || '—'}
                     </div>
-                    {servingProgress.deliveryTime ? (
-                      <div className="text-xs text-muted-foreground mt-1">Delivery time: {servingProgress.deliveryTime}</div>
+                    {servingProgress.deliveryShift ? (
+                      <div className="text-xs text-muted-foreground mt-1">Delivery shift: {formatDeliveryShift(servingProgress.deliveryShift)}</div>
                     ) : null}
 					{servingProgress.nextServingDate ? (
 						<div className="text-xs text-muted-foreground mt-1">Upcoming Serving Date: {servingProgress.nextServingDate}</div>
@@ -1372,8 +1377,8 @@ const Subscriptions = () => {
                       <div className="min-w-0">
                         <div className="font-medium text-oz-primary truncate">{p.title}</div>
                         <div className="text-sm text-muted-foreground mt-1">{p.plan.toUpperCase()} · Qty {p.quantity}</div>
-                        {p.startDate || p.deliveryTime ? (
-                          <div className="text-xs text-muted-foreground mt-1">Starts: {p.startDate || '—'} at {p.deliveryTime || '—'}</div>
+                        {p.startDate || p.deliveryShift ? (
+                          <div className="text-xs text-muted-foreground mt-1">Starts: {p.startDate || '—'} · {formatDeliveryShift(p.deliveryShift)}</div>
                         ) : null}
                         <div className="text-xs text-muted-foreground mt-1">Order: {p.orderId.slice(0, 8)}…</div>
                       </div>
@@ -1908,8 +1913,8 @@ const Subscriptions = () => {
                     <div className="min-w-0">
                       <div className="font-medium text-oz-primary truncate">{p.title}</div>
                       <div className="text-sm text-muted-foreground mt-1">{p.plan.toUpperCase()} · Qty {p.quantity}</div>
-                      {p.startDate || p.deliveryTime ? (
-                        <div className="text-xs text-muted-foreground mt-1">Starts: {p.startDate || '—'} at {p.deliveryTime || '—'}</div>
+                      {p.startDate || p.deliveryShift ? (
+                        <div className="text-xs text-muted-foreground mt-1">Starts: {p.startDate || '—'} · {formatDeliveryShift(p.deliveryShift)}</div>
                       ) : null}
                       <div className="text-xs text-muted-foreground mt-1">Order: {p.orderId.slice(0, 8)}…</div>
                     </div>

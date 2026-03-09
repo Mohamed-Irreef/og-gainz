@@ -7,6 +7,7 @@ const AddonSubscription = require('../models/AddonSubscription.model');
 const User = require('../models/User.model');
 
 const { isWeekdayISO, getEffectiveApprovedPauses, buildPauseKey, isIsoBetween, addDaysISO } = require('../utils/pauseSkip.util');
+const { normalizeShift, resolveShiftFromTime } = require('../utils/deliveryShift.util');
 
 const localTodayISO = () => {
 	const now = new Date();
@@ -128,8 +129,14 @@ const shiftFutureDeliveriesIntoWindow = async ({ userId, subscriptionId, fromISO
 		if (!donor) break;
 
 		const deliveryTime = String(donor.deliveryTime || normalizeHHmm(donor.time) || '').trim();
-		const timeKey = deliveryTime || String(donor.time || '').trim() || '12:00';
-		const groupKey = [uid, String(targetDate || '').trim(), String(timeKey || '').trim()].filter(Boolean).join('|');
+		const shiftKey = normalizeShift(donor.deliveryShift) || resolveShiftFromTime(deliveryTime || donor.time);
+		const groupKey = [
+			uid,
+			String(targetDate || '').trim(),
+			shiftKey || deliveryTime || String(donor.time || '').trim() || '12:00',
+		]
+			.filter(Boolean)
+			.join('|');
 
 		try {
 			await DailyDelivery.updateOne(
@@ -140,6 +147,7 @@ const shiftFutureDeliveriesIntoWindow = async ({ userId, subscriptionId, fromISO
 						deliveryDate: parseISODateToStartOfDay(targetDate),
 						// Preserve legacy time and canonical time, but fix groupKey for the new date.
 						deliveryTime: deliveryTime || donor.deliveryTime,
+						deliveryShift: shiftKey || donor.deliveryShift,
 						groupKey,
 					},
 				}
@@ -174,10 +182,15 @@ const ensureUpcomingDeliveries = async ({ userId, subscriptionId, days = 14 }) =
 		deliveriesToInsert.push({
 			date: iso,
 			time: template.time,
+			deliveryShift: normalizeShift(template.deliveryShift) || resolveShiftFromTime(template.deliveryTime || template.time),
 			userId: template.userId,
 			orderId: template.orderId,
 			subscriptionId: template.subscriptionId,
-			groupKey: [String(template.userId || ''), String(iso || '').trim(), String(template.deliveryTime || template.time || '').trim()].filter(Boolean).join('|'),
+			groupKey: [
+				String(template.userId || ''),
+				String(iso || '').trim(),
+				normalizeShift(template.deliveryShift) || resolveShiftFromTime(template.deliveryTime || template.time) || String(template.deliveryTime || template.time || '').trim(),
+			].filter(Boolean).join('|'),
 			address: template.address,
 			items: template.items,
 			status: 'PENDING',
@@ -240,10 +253,15 @@ const extendDeliveryBackedSubscription = async ({ userId, subscriptionId, servin
 		const doc = {
 			date,
 			time: String(last.time || '').trim() || '12:00',
+			deliveryShift: normalizeShift(last.deliveryShift) || resolveShiftFromTime(last.deliveryTime || last.time),
 			userId: last.userId,
 			orderId: last.orderId || last.sourceOrderId,
 			subscriptionId: last.subscriptionId,
-			groupKey: [String(last.userId || ''), String(date || '').trim(), String(last.deliveryTime || last.time || '').trim()].filter(Boolean).join('|'),
+			groupKey: [
+				String(last.userId || ''),
+				String(date || '').trim(),
+				normalizeShift(last.deliveryShift) || resolveShiftFromTime(last.deliveryTime || last.time) || String(last.deliveryTime || last.time || '').trim(),
+			].filter(Boolean).join('|'),
 			address: last.address,
 			items: last.items,
 			status: 'PENDING',

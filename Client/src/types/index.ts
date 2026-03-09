@@ -97,7 +97,8 @@ export interface Delivery {
   id: string;
   date: string; // ISO date string
   status: DeliveryStatus;
-  deliveryTime: string;
+  deliveryTime?: string;
+  deliveryShift?: 'MORNING' | 'AFTERNOON' | 'EVENING';
   isSkipped: boolean;
   skipReason?: string;
 }

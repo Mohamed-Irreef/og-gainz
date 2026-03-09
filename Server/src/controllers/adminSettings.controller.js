@@ -4,7 +4,7 @@ const AdminSettingsLog = require('../models/AdminSettingsLog.model');
 const getSingleton = async () => {
   let doc = await Settings.findOne({}).lean();
   if (!doc) {
-    doc = await Settings.create({});
+    doc = await Settings.create({ walletRefundPolicy: 'Pending update' });
     doc = doc.toObject({ versionKey: false });
   }
   return doc;
@@ -18,6 +18,7 @@ const buildPayload = (body) => {
     'maxDeliveryRadius',
     'signupBonusCredits',
     'deliveryCutoffMinutes',
+    'maxOrdersPerShift',
     'walletRefundPolicy',
   ];
 

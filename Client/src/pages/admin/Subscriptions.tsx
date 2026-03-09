@@ -55,6 +55,7 @@ import { adminPauseSkipService } from '@/services/adminPauseSkipService';
 import { adminDeliveriesService, type AdminDailyDelivery, type AdminDeliveryStatus } from '@/services/adminDeliveriesService';
 import type { PauseSkipRequest } from '@/types';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { formatShiftLabel, normalizeShift } from '@/utils/deliveryShift';
 
 const safeString = (v: unknown) => String(v || '').trim();
 
@@ -472,6 +473,7 @@ export default function Subscriptions() {
 									<TableHead>Start</TableHead>
 									<TableHead>End</TableHead>
 									<TableHead>Status</TableHead>
+									<TableHead>Shift</TableHead>
 									<TableHead>Servings</TableHead>
 									<TableHead>Summary</TableHead>
 									<TableHead className="text-right">Action</TableHead>
@@ -483,6 +485,7 @@ export default function Subscriptions() {
 									const nextStatus: AdminSubscriptionStatus = s.status === 'active' ? 'paused' : 'active';
 									const servingsText = typeof s.delivered === 'number' && typeof s.total === 'number' ? `${s.delivered}/${s.total}` : '-';
 									const endDate = s.scheduleEndDate || s.cycleEndDate;
+									const shiftLabel = s.deliveryShift ? formatShiftLabel(normalizeShift(s.deliveryShift)) : '—';
 									return (
 										<TableRow key={`${s.kind}:${s.id}`}>
 											<TableCell className="font-mono text-xs">{safeString(s.userId).slice(0, 12)}…</TableCell>
@@ -506,6 +509,7 @@ export default function Subscriptions() {
 													) : null}
 												</div>
 											</TableCell>
+											<TableCell className="text-sm text-muted-foreground">{shiftLabel}</TableCell>
 											<TableCell className="text-sm text-muted-foreground">{servingsText}</TableCell>
 											<TableCell className="text-sm text-muted-foreground">{summarize(s)}</TableCell>
 											<TableCell className="text-right">

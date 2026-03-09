@@ -5,12 +5,18 @@ import { ArrowLeft, Clock, CalendarDays, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
-import type { CartOrderDetails } from '@/types/cartPhase4';
+import type { CartOrderDetails, DeliveryShift } from '@/types/cartPhase4';
 import { useSafeBack } from '@/hooks/use-safe-back';
+import {
+	DELIVERY_SHIFT_META,
+	DELIVERY_SHIFTS,
+	getKolkataISODate,
+	getKolkataNow,
+} from '@/utils/deliveryShift';
 
 const CUTOFF_HOUR_LOCAL = 19; // 7 PM
 
@@ -27,27 +33,7 @@ const addDays = (d: Date, days: number) => {
 	return next;
 };
 
-const buildTimeOptions = (min: string, max: string, stepMinutes: number) => {
-	const toMinutes = (hhmm: string) => {
-		const [hh, mm] = hhmm.split(':').map((x) => Number(x));
-		return hh * 60 + mm;
-	};
-	const toHhMm = (total: number) => {
-		const hh = String(Math.floor(total / 60)).padStart(2, '0');
-		const mm = String(total % 60).padStart(2, '0');
-		return `${hh}:${mm}`;
-	};
-
-	const start = toMinutes(min);
-	const end = toMinutes(max);
-	const step = Math.max(1, stepMinutes);
-
-	const out: string[] = [];
-	for (let m = start; m <= end; m += step) out.push(toHhMm(m));
-	return out;
-};
-
-const DELIVERY_TIME_OPTIONS = buildTimeOptions('06:00', '23:00', 15);
+const SHIFT_OPTIONS = DELIVERY_SHIFTS.map((key) => ({ key, ...DELIVERY_SHIFT_META[key] }));
 
 export default function OrderDetails() {
 	const navigate = useNavigate();
@@ -61,7 +47,7 @@ export default function OrderDetails() {
 		}
 	}, [navigate, state.items.length]);
 
-	const now = useMemo(() => new Date(), []);
+	const now = useMemo(() => getKolkataNow(), []);
 	const isAfterCutoff = useMemo(() => now.getHours() >= CUTOFF_HOUR_LOCAL, [now]);
 	const minStartDate = useMemo(() => (isAfterCutoff ? toYyyyMmDd(addDays(now, 1)) : toYyyyMmDd(now)), [isAfterCutoff, now]);
 
@@ -79,11 +65,11 @@ export default function OrderDetails() {
 		if (!details) return { ok: false, reason: 'Missing order details' };
 
 		const startDate = details.startDate;
-		const deliveryTime = details.deliveryTime;
+		const deliveryShift = details.deliveryShift;
 		const immediate = Boolean(details.immediateDelivery);
 
 		if (plan === 'weekly' || plan === 'monthly') {
-			if (!startDate || !deliveryTime) return { ok: false, reason: 'Start date and delivery time are required' };
+			if (!startDate || !deliveryShift) return { ok: false, reason: 'Start date and delivery shift are required' };
 			if (startDate < minStartDate) return { ok: false, reason: `Start date must be ${minStartDate} or later` };
 			return { ok: true };
 		}
@@ -101,7 +87,7 @@ export default function OrderDetails() {
 			return { ok: true };
 		}
 
-		if (!startDate || !deliveryTime) return { ok: false, reason: 'Choose Immediate Delivery or select date/time' };
+		if (!startDate || !deliveryShift) return { ok: false, reason: 'Choose Immediate Delivery or select date/shift' };
 		if (startDate < minStartDate) return { ok: false, reason: `Start date must be ${minStartDate} or later` };
 		return { ok: true };
 	}, [isAfterCutoff, minStartDate, now]);
@@ -144,7 +130,7 @@ export default function OrderDetails() {
 
 			<div className="container mx-auto px-4 py-8">
 				<h1 className="text-3xl font-bold text-oz-primary mb-2">Order Details</h1>
-				<p className="text-muted-foreground">Set start date and delivery time for each item before payment.</p>
+				<p className="text-muted-foreground">Set start date and delivery shift for each item before payment.</p>
 
 				{isAfterCutoff ? (
 					<div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 flex gap-2">
@@ -193,7 +179,7 @@ export default function OrderDetails() {
 												</Button>
 											</div>
 											<div className="text-xs text-muted-foreground mt-2">
-												If you don’t select Immediate Delivery, choose a date and time below.
+												If you don’t select Immediate Delivery, choose a date and shift below.
 											</div>
 										</div>
 									) : null}
@@ -213,30 +199,49 @@ export default function OrderDetails() {
 										</div>
 										<div>
 											<div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
-												<Clock className="h-4 w-4" /> Delivery time
+												<Clock className="h-4 w-4" /> Delivery shift
 											</div>
-											<Select
-												disabled={Boolean(details.immediateDelivery) && isSingleOrTrial}
-												value={details.deliveryTime || ''}
-												onValueChange={(v) => setForItem(item.id, { deliveryTime: v })}
+											<RadioGroup
+												value={details.deliveryShift || ''}
+												onValueChange={(v) => {
+													if (Boolean(details.immediateDelivery) && isSingleOrTrial) return;
+													setForItem(item.id, { deliveryShift: v as DeliveryShift });
+												}}
+												className="grid grid-cols-1 gap-2"
 											>
-												<SelectTrigger className="h-10">
-													<SelectValue placeholder="Select time" />
-												</SelectTrigger>
-												<SelectContent className="max-h-52">
-													{DELIVERY_TIME_OPTIONS.map((t) => (
-														<SelectItem key={t} value={t}>
-															{t}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
+												{SHIFT_OPTIONS.map((shift) => {
+													const selected = details.deliveryShift === shift.key;
+													return (
+														<label
+															key={shift.key}
+															htmlFor={`${item.id}-shift-${shift.key}`}
+															className={
+																`group flex items-center justify-between gap-3 rounded-lg border p-3 transition-all ${
+																	selected ? shift.softClass : 'bg-white hover:bg-oz-neutral/10'
+																}`
+															}
+														>
+															<div className="flex items-center gap-3">
+																<RadioGroupItem id={`${item.id}-shift-${shift.key}`} value={shift.key} className="sr-only" />
+																<div className="text-lg" aria-hidden>
+																	{shift.icon}
+																</div>
+																<div>
+																	<div className="text-sm font-medium text-oz-primary">{shift.label}</div>
+																	<div className="text-xs text-muted-foreground">{shift.windowLabel}</div>
+																</div>
+															</div>
+															<div className={`h-2 w-2 rounded-full ${selected ? 'bg-oz-accent' : 'bg-muted'}`} aria-hidden />
+														</label>
+													);
+												})}
+											</RadioGroup>
 										</div>
 									</div>
 
 									{isSub ? (
 										<div className="text-xs text-muted-foreground">
-											Weekly/Monthly subscriptions require a start date and a daily delivery time.
+											Weekly/Monthly subscriptions require a start date and a delivery shift.
 										</div>
 									) : null}
 

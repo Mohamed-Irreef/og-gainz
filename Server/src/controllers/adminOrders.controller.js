@@ -7,6 +7,12 @@ const PauseSkipLog = require('../models/PauseSkipLog.model');
 const logger = require('../utils/logger.util');
 const { validateOrderStatusTransition, ORDER_LIFECYCLE_STATUSES } = require('../utils/validateOrderStatusTransition');
 const { getEffectiveApprovedPauses, buildPauseKey, isIsoBetween } = require('../utils/pauseSkip.util');
+const {
+	getShiftMeta,
+	normalizeShift,
+	resolveShiftFromTime,
+	getNowKolkata,
+} = require('../utils/deliveryShift.util');
 const { getScheduleMetaByUserAndSubscription } = require('../utils/subscriptionSchedule.util');
 
 const ORDER_ACCEPTANCE_STATUSES = ['PENDING_REVIEW', 'CONFIRMED', 'DECLINED'];
@@ -45,6 +51,14 @@ const isWeekday = (d) => {
 	return dow >= 1 && dow <= 5;
 };
 
+const formatHHmm = (d) => {
+	const dt = d instanceof Date ? d : new Date(d);
+	if (Number.isNaN(dt.getTime())) return undefined;
+	const hh = String(dt.getHours()).padStart(2, '0');
+	const mm = String(dt.getMinutes()).padStart(2, '0');
+	return `${hh}:${mm}`;
+};
+
 const normalizeHHmm = (value) => {
 	const s = String(value || '').trim();
 	const m = /^([0-9]{1,2}):([0-9]{2})$/.exec(s);
@@ -54,6 +68,24 @@ const normalizeHHmm = (value) => {
 	if (!Number.isFinite(hh) || !Number.isFinite(mm)) return undefined;
 	if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return undefined;
 	return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+};
+
+const resolveShiftAndTime = ({ shift, time }) => {
+	const normalizedShift = normalizeShift(shift) || resolveShiftFromTime(time);
+	if (normalizedShift) {
+		const meta = getShiftMeta(normalizedShift);
+		return {
+			shift: normalizedShift,
+			time: meta?.start || time,
+			deliveryTime: meta?.start || normalizeHHmm(time),
+		};
+	}
+	const normalizedTime = normalizeHHmm(time) || String(time || '').trim() || '12:00';
+	return {
+		shift: resolveShiftFromTime(normalizedTime),
+		time: normalizedTime,
+		deliveryTime: normalizeHHmm(normalizedTime),
+	};
 };
 
 const safeString = (v) => String(v || '').trim();
@@ -268,6 +300,7 @@ const enrichOrderForAdmin = async (order) => {
 const buildDailyDeliveryDoc = ({
 	date,
 	time,
+	deliveryShift,
 	userId,
 	address,
 	items,
@@ -280,10 +313,17 @@ const buildDailyDeliveryDoc = ({
 	// Phase 6D canonical fields (in addition to legacy date/time)
 	deliveryDate: parseISODateToStartOfDay(date),
 	deliveryTime: normalizeHHmm(time),
+	deliveryShift: normalizeShift(deliveryShift) || resolveShiftFromTime(time),
 	userId,
 	orderId: sourceOrderId,
 	subscriptionId: subscriptionId || undefined,
-	groupKey: [String(userId || ''), String(date || '').trim(), normalizeHHmm(time) || String(time || '').trim()].filter(Boolean).join('|'),
+	groupKey: [
+		String(userId || ''),
+		String(date || '').trim(),
+		normalizeShift(deliveryShift) || resolveShiftFromTime(time) || normalizeHHmm(time) || String(time || '').trim(),
+	]
+		.filter(Boolean)
+		.join('|'),
 	address,
 	items,
 	status: 'PENDING',
@@ -467,13 +507,21 @@ const adminMoveOrderToKitchen = async (req, res, next) => {
 			const immediate = Boolean(first?.orderDetails?.immediateDelivery);
 			const startDate = immediate ? new Date() : parseLocalISODate(first?.orderDetails?.startDate) || new Date();
 			const date = toLocalISODate(startDate);
-			const time = String(first?.orderDetails?.deliveryTime || '');
-			const normalizedTime = time.trim() || '12:00';
+			let shiftGuess = first?.orderDetails?.deliveryShift;
+			let timeGuess = first?.orderDetails?.deliveryTime;
+			if (!shiftGuess && !timeGuess && immediate) {
+				const now = getNowKolkata();
+				timeGuess = formatHHmm(now);
+				shiftGuess = resolveShiftFromTime(timeGuess);
+			}
+			const resolved = resolveShiftAndTime({ shift: shiftGuess, time: timeGuess });
+			const normalizedTime = String(resolved.time || '').trim() || '12:00';
 
 			deliveriesToInsert.push(
 				buildDailyDeliveryDoc({
 					date,
 					time: normalizedTime,
+					deliveryShift: resolved.shift,
 					userId,
 					address,
 					items: items.map((it) => ({
@@ -540,7 +588,11 @@ const adminMoveOrderToKitchen = async (req, res, next) => {
 
 				const immediate = Boolean(it?.orderDetails?.immediateDelivery);
 				const startDate = immediate ? new Date() : parseLocalISODate(it?.orderDetails?.startDate) || new Date();
-				const time = String(it?.orderDetails?.deliveryTime || '').trim() || '12:00';
+				const resolved = resolveShiftAndTime({
+					shift: it?.orderDetails?.deliveryShift,
+					time: it?.orderDetails?.deliveryTime,
+				});
+				const time = String(resolved.time || '').trim() || '12:00';
 
 				const sid = String(it.cartItemId || '').trim();
 				const pauseKey = sid ? buildPauseKey(userId, sid) : undefined;
@@ -558,6 +610,7 @@ const adminMoveOrderToKitchen = async (req, res, next) => {
 						buildDailyDeliveryDoc({
 							date,
 							time,
+							deliveryShift: resolved.shift,
 							userId,
 							address,
 							items: [

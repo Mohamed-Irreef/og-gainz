@@ -1,5 +1,6 @@
 export type CartItemType = 'meal' | 'addon' | 'byo';
 export type CartPlan = 'single' | 'trial' | 'weekly' | 'monthly';
+export type DeliveryShift = 'MORNING' | 'AFTERNOON' | 'EVENING';
 
 export type CartItemMeta = {
 	// Informational only (does not affect pricing). Useful for showing subscription servings in UI.
@@ -89,6 +90,7 @@ export type DeliveryLocationInput = {
 export type CartOrderDetails = {
 	startDate?: string; // YYYY-MM-DD
 	deliveryTime?: string; // HH:mm
+	deliveryShift?: DeliveryShift;
 	immediateDelivery?: boolean;
 };
 

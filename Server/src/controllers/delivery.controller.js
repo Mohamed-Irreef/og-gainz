@@ -1,7 +1,9 @@
-const { ENV } = require('../config/env.config');
+const Settings = require('../models/Settings.model');
+const { calculateDeliveryCost } = require('../utils/deliveryCostCalculator');
 const DailyDelivery = require('../models/DailyDelivery.model');
 const PauseSkipLog = require('../models/PauseSkipLog.model');
 const { getEffectiveApprovedPauses, isIsoBetween, buildPauseKey } = require('../utils/pauseSkip.util');
+const { normalizeShift, resolveShiftFromTime, getShiftSortIndex } = require('../utils/deliveryShift.util');
 const {
   validateLatLng,
   haversineDistanceKm,
@@ -15,10 +17,9 @@ const DEFAULTS = {
   kitchenLongitude: 80.204236,
   bufferFactor: 1.1,
   roundDecimals: 2,
-  freeDeliveryDistanceKm: 5,
-  maxDeliveryDistanceKm: 10,
-  baseDeliveryFee: 0,
-  deliveryFeePerKm: 10,
+  freeDeliveryRadius: 0,
+  maxDeliveryRadius: 0,
+  extraChargePerKm: 0,
 };
 
 const computeDistanceKm = ({ from, to, bufferFactor, roundDecimals }) => {
@@ -33,33 +34,27 @@ const toFiniteNumber = (value) => {
   return Number.isFinite(num) ? num : undefined;
 };
 
-const getSettings = () => {
+const getSettings = async () => {
   const kitchenLatitude = toFiniteNumber(process.env.KITCHEN_LAT) ?? DEFAULTS.kitchenLatitude;
   const kitchenLongitude = toFiniteNumber(process.env.KITCHEN_LNG) ?? DEFAULTS.kitchenLongitude;
   const bufferFactor = toFiniteNumber(process.env.DELIVERY_DISTANCE_BUFFER_FACTOR) ?? DEFAULTS.bufferFactor;
   const roundDecimals = toFiniteNumber(process.env.DELIVERY_DISTANCE_ROUND_DECIMALS) ?? DEFAULTS.roundDecimals;
-  const freeDeliveryDistanceKm =
-    toFiniteNumber(process.env.FREE_DELIVERY_DISTANCE_KM) ?? DEFAULTS.freeDeliveryDistanceKm;
-  const maxDeliveryDistanceKm = ENV.MAX_DELIVERY_DISTANCE_KM ?? DEFAULTS.maxDeliveryDistanceKm;
-  const baseDeliveryFee = ENV.BASE_DELIVERY_FEE ?? DEFAULTS.baseDeliveryFee;
-  const deliveryFeePerKm = ENV.DELIVERY_FEE_PER_KM ?? DEFAULTS.deliveryFeePerKm;
+  const settings = await Settings.findOne({}).lean();
+  const freeDeliveryRadius =
+    settings && typeof settings.freeDeliveryRadius === 'number' ? settings.freeDeliveryRadius : DEFAULTS.freeDeliveryRadius;
+  const maxDeliveryRadius =
+    settings && typeof settings.maxDeliveryRadius === 'number' ? settings.maxDeliveryRadius : DEFAULTS.maxDeliveryRadius;
+  const extraChargePerKm =
+    settings && typeof settings.extraChargePerKm === 'number' ? settings.extraChargePerKm : DEFAULTS.extraChargePerKm;
 
   return {
     kitchen: { latitude: kitchenLatitude, longitude: kitchenLongitude },
     bufferFactor,
     roundDecimals,
-    freeDeliveryDistanceKm,
-    maxDeliveryDistanceKm,
-    baseDeliveryFee,
-    deliveryFeePerKm,
+    freeDeliveryRadius,
+    maxDeliveryRadius,
+    extraChargePerKm,
   };
-};
-
-const computeDeliveryFee = ({ distanceKm, freeDeliveryDistanceKm, baseDeliveryFee, deliveryFeePerKm }) => {
-  if (!Number.isFinite(distanceKm) || distanceKm < 0) return 0;
-  if (distanceKm <= freeDeliveryDistanceKm) return 0;
-  const payableKm = Math.max(0, distanceKm - freeDeliveryDistanceKm);
-  return Math.ceil(baseDeliveryFee + payableKm * deliveryFeePerKm);
 };
 
 const quoteDelivery = async (req, res, next) => {
@@ -68,7 +63,7 @@ const quoteDelivery = async (req, res, next) => {
     const longitude = toFiniteNumber(req.body?.longitude);
     const address = typeof req.body?.address === 'string' ? req.body.address.trim() : '';
 
-    const settings = getSettings();
+    const settings = await getSettings();
     const from = settings.kitchen;
     const to = { latitude, longitude };
 
@@ -86,15 +81,14 @@ const quoteDelivery = async (req, res, next) => {
       roundDecimals: settings.roundDecimals,
     });
 
-    const isServiceable = distanceKm <= settings.maxDeliveryDistanceKm;
-    const deliveryFee = isServiceable
-      ? computeDeliveryFee({
-        distanceKm,
-        freeDeliveryDistanceKm: settings.freeDeliveryDistanceKm,
-        baseDeliveryFee: settings.baseDeliveryFee,
-        deliveryFeePerKm: settings.deliveryFeePerKm,
-      })
-      : 0;
+    if (settings.maxDeliveryRadius && distanceKm > settings.maxDeliveryRadius) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Delivery location is outside service area',
+      });
+    }
+
+    const deliveryFee = calculateDeliveryCost(distanceKm, settings.freeDeliveryRadius, settings.extraChargePerKm);
 
     return res.json({
       status: 'success',
@@ -105,13 +99,12 @@ const quoteDelivery = async (req, res, next) => {
         longitude,
         rawDistanceKm: roundToDecimals(rawDistanceKm, 3),
         distanceKm,
-        isServiceable,
+        isServiceable: true,
         deliveryFee,
         feeRules: {
-          freeDeliveryDistanceKm: settings.freeDeliveryDistanceKm,
-          maxDeliveryDistanceKm: settings.maxDeliveryDistanceKm,
-          baseDeliveryFee: settings.baseDeliveryFee,
-          deliveryFeePerKm: settings.deliveryFeePerKm,
+          freeDeliveryRadius: settings.freeDeliveryRadius,
+          maxDeliveryRadius: settings.maxDeliveryRadius,
+          extraChargePerKm: settings.extraChargePerKm,
           bufferFactor: settings.bufferFactor,
           roundDecimals: settings.roundDecimals,
         },
@@ -129,28 +122,26 @@ const getFeeForDistance = async (req, res, next) => {
       return res.status(400).json({ status: 'error', message: 'distanceKm must be a non-negative number' });
     }
 
-    const settings = getSettings();
-    const isServiceable = distanceKm <= settings.maxDeliveryDistanceKm;
-    const deliveryFee = isServiceable
-      ? computeDeliveryFee({
-        distanceKm,
-        freeDeliveryDistanceKm: settings.freeDeliveryDistanceKm,
-        baseDeliveryFee: settings.baseDeliveryFee,
-        deliveryFeePerKm: settings.deliveryFeePerKm,
-      })
-      : 0;
+    const settings = await getSettings();
+    if (settings.maxDeliveryRadius && distanceKm > settings.maxDeliveryRadius) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Delivery location is outside service area',
+      });
+    }
+
+    const deliveryFee = calculateDeliveryCost(distanceKm, settings.freeDeliveryRadius, settings.extraChargePerKm);
 
     return res.json({
       status: 'success',
       data: {
         distanceKm: roundToDecimals(distanceKm, settings.roundDecimals),
-        isServiceable,
+        isServiceable: true,
         deliveryFee,
         feeRules: {
-          freeDeliveryDistanceKm: settings.freeDeliveryDistanceKm,
-          maxDeliveryDistanceKm: settings.maxDeliveryDistanceKm,
-          baseDeliveryFee: settings.baseDeliveryFee,
-          deliveryFeePerKm: settings.deliveryFeePerKm,
+          freeDeliveryRadius: settings.freeDeliveryRadius,
+          maxDeliveryRadius: settings.maxDeliveryRadius,
+          extraChargePerKm: settings.extraChargePerKm,
         },
       },
     });
@@ -184,6 +175,18 @@ const listMyDailyDeliveries = async (req, res, next) => {
     const deliveries = await DailyDelivery.find({ userId, date: { $gte: from, $lte: to } })
       .sort({ date: 1, time: 1, createdAt: 1 })
       .lean();
+
+    deliveries.sort((a, b) => {
+      if (a.date !== b.date) return String(a.date).localeCompare(String(b.date));
+      const shiftA = normalizeShift(a.deliveryShift) || resolveShiftFromTime(a.deliveryTime || a.time);
+      const shiftB = normalizeShift(b.deliveryShift) || resolveShiftFromTime(b.deliveryTime || b.time);
+      const shiftCmp = getShiftSortIndex(shiftA) - getShiftSortIndex(shiftB);
+      if (shiftCmp !== 0) return shiftCmp;
+      const timeA = String(a.deliveryTime || a.time || '').trim();
+      const timeB = String(b.deliveryTime || b.time || '').trim();
+      if (timeA && timeB && timeA !== timeB) return timeA.localeCompare(timeB);
+      return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+    });
 
     // Phase 7C: During an approved pause window, hide pending deliveries from the user.
     // (Delivered items remain visible as history.)

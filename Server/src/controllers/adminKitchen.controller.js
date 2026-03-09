@@ -5,6 +5,15 @@ const PauseSkipLog = require('../models/PauseSkipLog.model');
 const User = require('../models/User.model');
 const logger = require('../utils/logger.util');
 const { getEffectiveApprovedPauses, buildPauseKey } = require('../utils/pauseSkip.util');
+const {
+	getShiftMeta,
+	normalizeShift,
+	resolveShiftFromTime,
+	getShiftSortIndex,
+	getNowKolkata,
+	getKolkataISODate,
+	buildKolkataDateTime,
+} = require('../utils/deliveryShift.util');
 
 const DELIVERY_STATUSES = ['PENDING', 'COOKING', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'SKIPPED'];
 
@@ -40,7 +49,7 @@ const nextStatusFrom = (current) => {
 
 const adminKitchenListDeliveries = async (req, res, next) => {
 	try {
-		const dateStr = String(req.query?.date || '').trim() || toLocalISODate(new Date());
+		const dateStr = String(req.query?.date || '').trim() || getKolkataISODate();
 		const dayStart = parseLocalISODate(dateStr);
 		if (!dayStart) return res.status(400).json({ status: 'error', message: 'Invalid date (expected YYYY-MM-DD)' });
 
@@ -70,6 +79,17 @@ const adminKitchenListDeliveries = async (req, res, next) => {
 		const deliveries = await DailyDelivery.find(filter)
 			.sort({ deliveryTime: 1, time: 1, createdAt: 1 })
 			.lean();
+
+		deliveries.sort((a, b) => {
+			const shiftA = normalizeShift(a.deliveryShift) || resolveShiftFromTime(a.deliveryTime || a.time);
+			const shiftB = normalizeShift(b.deliveryShift) || resolveShiftFromTime(b.deliveryTime || b.time);
+			const shiftCmp = getShiftSortIndex(shiftA) - getShiftSortIndex(shiftB);
+			if (shiftCmp !== 0) return shiftCmp;
+			const timeA = String(a.deliveryTime || a.time || '').trim();
+			const timeB = String(b.deliveryTime || b.time || '').trim();
+			if (timeA && timeB && timeA !== timeB) return timeA.localeCompare(timeB);
+			return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+		});
 
 		// Phase 7: Filter out deliveries during an approved pause window.
 		// Meal-pack deliveries are linked via `subscriptionId` = cartItemId.
@@ -161,7 +181,7 @@ const adminKitchenListDeliveries = async (req, res, next) => {
 const adminKitchenUpdateDeliveryStatus = async (req, res, next) => {
 	try {
 		const actor = String(req.user?.id || req.user?._id || '').trim() || 'unknown';
-		const todayISO = toLocalISODate(new Date());
+		const todayISO = getKolkataISODate();
 		const deliveryId = String(req.params.deliveryId || '').trim();
 		if (!mongoose.isValidObjectId(deliveryId)) {
 			return res.status(404).json({ status: 'error', message: 'Delivery not found' });
@@ -193,6 +213,22 @@ const adminKitchenUpdateDeliveryStatus = async (req, res, next) => {
 
 		if (status === current) {
 			return res.json({ status: 'success', data: delivery.toObject() });
+		}
+
+		if (status === 'DELIVERED') {
+			const shift = normalizeShift(delivery.deliveryShift) || resolveShiftFromTime(delivery.deliveryTime || delivery.time);
+			const meta = getShiftMeta(shift);
+			if (meta && effectiveDate) {
+				const windowStart = buildKolkataDateTime(effectiveDate, meta.start);
+				const windowEnd = buildKolkataDateTime(effectiveDate, meta.deliveryCutoff);
+				const now = getNowKolkata();
+				if (!windowStart || !windowEnd || now < windowStart || now > windowEnd) {
+					return res.status(400).json({
+						status: 'error',
+						message: `Deliveries for ${meta.label} shift can only be marked delivered between ${meta.start} and ${meta.deliveryCutoff} (Asia/Kolkata).`,
+					});
+				}
+			}
 		}
 
 		delivery.status = status;

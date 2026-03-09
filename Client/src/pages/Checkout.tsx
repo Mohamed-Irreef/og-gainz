@@ -181,11 +181,11 @@ export default function Checkout() {
       if (!d) return true;
       const plan = item.plan;
       const startDate = d.startDate;
-      const deliveryTime = d.deliveryTime;
+      const deliveryShift = d.deliveryShift;
       const immediate = Boolean(d.immediateDelivery);
 
       if (plan === 'weekly' || plan === 'monthly') {
-        if (!startDate || !deliveryTime) return true;
+        if (!startDate || !deliveryShift) return true;
         if (startDate < minStartDate) return true;
         return false;
       }
@@ -195,7 +195,7 @@ export default function Checkout() {
         if (isAfterCutoff) return true;
         return false;
       }
-      if (!startDate || !deliveryTime) return true;
+      if (!startDate || !deliveryShift) return true;
       if (startDate < minStartDate) return true;
       return false;
     });

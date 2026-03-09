@@ -20,16 +20,20 @@ const normalizeOrderDetailsByItemId = (value) => {
 
     const startDate = typeof raw.startDate === 'string' ? raw.startDate.trim() : undefined;
     const deliveryTime = typeof raw.deliveryTime === 'string' ? raw.deliveryTime.trim() : undefined;
+    const deliveryShift = typeof raw.deliveryShift === 'string' ? raw.deliveryShift.trim().toUpperCase() : undefined;
     const immediateDelivery = typeof raw.immediateDelivery === 'boolean' ? raw.immediateDelivery : undefined;
 
     out[String(key)] = {
       startDate: startDate || undefined,
       deliveryTime: deliveryTime || undefined,
+      deliveryShift: deliveryShift || undefined,
       immediateDelivery,
     };
   }
   return out;
 };
+
+const VALID_SHIFTS = new Set(['MORNING', 'AFTERNOON', 'EVENING']);
 
 const validateOrderDetailsForItems = ({ items, orderDetailsByItemId }) => {
   const arr = Array.isArray(items) ? items : [];
@@ -46,11 +50,19 @@ const validateOrderDetailsForItems = ({ items, orderDetailsByItemId }) => {
     }
 
     const immediate = Boolean(details.immediateDelivery);
+    const deliveryShift = typeof details.deliveryShift === 'string' ? details.deliveryShift.trim().toUpperCase() : '';
+    if (deliveryShift && !VALID_SHIFTS.has(deliveryShift)) {
+      const err = new Error(`Invalid deliveryShift for cart item ${cartItemId}`);
+      err.statusCode = 400;
+      throw err;
+    }
     const needsSchedule = plan === 'weekly' || plan === 'monthly' || !immediate;
 
     if (needsSchedule) {
-      if (!details.startDate || !details.deliveryTime) {
-        const err = new Error(`Missing startDate/deliveryTime for cart item ${cartItemId}`);
+      const hasShift = typeof details.deliveryShift === 'string' && details.deliveryShift.trim().length > 0;
+      const hasTime = typeof details.deliveryTime === 'string' && details.deliveryTime.trim().length > 0;
+      if (!details.startDate || (!hasShift && !hasTime)) {
+        const err = new Error(`Missing startDate/deliveryShift for cart item ${cartItemId}`);
         err.statusCode = 400;
         throw err;
       }
@@ -184,19 +196,20 @@ const initiateCheckout = async (req, res, next) => {
         }
         : undefined;
 
+    const orderDetailsByItemId = normalizeOrderDetailsByItemId(req.body?.orderDetailsByItemId);
+    validateOrderDetailsForItems({ items: req.body?.items, orderDetailsByItemId });
+
     const quote = await quoteCartData({
       userId,
       items: req.body?.items,
       creditsToApply: req.body?.creditsToApply,
       deliveryLocation,
+      orderDetailsByItemId,
     });
 
     if (!quote.isServiceable) {
       return res.status(400).json({ status: 'error', message: 'Delivery location is outside service area' });
     }
-
-    const orderDetailsByItemId = normalizeOrderDetailsByItemId(req.body?.orderDetailsByItemId);
-    validateOrderDetailsForItems({ items: req.body?.items, orderDetailsByItemId });
 
     const orderItems = mapQuotedItemsToOrderItems(quote.items, req.body?.items, orderDetailsByItemId);
     const orderDoc = await Order.create({

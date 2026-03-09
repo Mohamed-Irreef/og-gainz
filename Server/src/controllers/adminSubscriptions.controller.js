@@ -5,6 +5,7 @@ const DailyDelivery = require('../models/DailyDelivery.model');
 const PauseSkipLog = require('../models/PauseSkipLog.model');
 const { getEffectiveApprovedPauses, buildPauseKey, isIsoBetween } = require('../utils/pauseSkip.util');
 const { getScheduleMetaByUserAndSubscription } = require('../utils/subscriptionSchedule.util');
+const { normalizeShift, resolveShiftFromTime } = require('../utils/deliveryShift.util');
 
 const FREQUENCIES = new Set(['weekly', 'monthly', 'trial']);
 const STATUSES = new Set(['active', 'paused']);
@@ -158,6 +159,7 @@ const buildMealPackSubscriptions = async ({ frequency, limit }) => {
 				frequency: plan,
 				status: 'active',
 				startDate: safeString(it?.orderDetails?.startDate),
+				deliveryShift: normalizeShift(it?.orderDetails?.deliveryShift) || resolveShiftFromTime(it?.orderDetails?.deliveryTime),
 				title: normalizeTitleFromOrderItem(it),
 				orderId: o._id != null ? String(o._id) : undefined,
 				createdAt: o.createdAt,

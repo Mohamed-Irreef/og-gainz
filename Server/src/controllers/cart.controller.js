@@ -4,7 +4,11 @@ const BuildYourOwnItem = require('../models/BuildYourOwnItem.model');
 const BuildYourOwnConfig = require('../models/BuildYourOwnConfig.model');
 const Order = require('../models/Order.model');
 const User = require('../models/User.model');
-const { ENV } = require('../config/env.config');
+const Settings = require('../models/Settings.model');
+const { getMealUnitPrice } = require('../utils/mealPricing.util');
+const { calculateDeliveryFee } = require('../services/deliveryFeeCalculator');
+const { calculateDeliveryCost } = require('../utils/deliveryCostCalculator');
+const { getShiftMeta, normalizeShift, getKolkataISODate } = require('../utils/deliveryShift.util');
 const {
   validateLatLng,
   haversineDistanceKm,
@@ -20,10 +24,9 @@ const DEFAULTS = {
 	kitchenLongitude: 80.204236,
   bufferFactor: 1.1,
 	roundDecimals: 2,
-  freeDeliveryDistanceKm: 5,
-  maxDeliveryDistanceKm: 10,
-  baseDeliveryFee: 0,
-  deliveryFeePerKm: 10,
+	freeDeliveryRadius: 0,
+	maxDeliveryRadius: 0,
+	extraChargePerKm: 0,
 };
 
 const toFiniteNumber = (value) => {
@@ -31,36 +34,31 @@ const toFiniteNumber = (value) => {
   return Number.isFinite(num) ? num : undefined;
 };
 
-const getDeliverySettings = () => {
+const getDeliverySettings = async () => {
   const kitchenLatitude = toFiniteNumber(process.env.KITCHEN_LAT) ?? DEFAULTS.kitchenLatitude;
   const kitchenLongitude = toFiniteNumber(process.env.KITCHEN_LNG) ?? DEFAULTS.kitchenLongitude;
   const bufferFactor = toFiniteNumber(process.env.DELIVERY_DISTANCE_BUFFER_FACTOR) ?? DEFAULTS.bufferFactor;
   const roundDecimals = toFiniteNumber(process.env.DELIVERY_DISTANCE_ROUND_DECIMALS) ?? DEFAULTS.roundDecimals;
-  const freeDeliveryDistanceKm = toFiniteNumber(process.env.FREE_DELIVERY_DISTANCE_KM) ?? DEFAULTS.freeDeliveryDistanceKm;
-  const maxDeliveryDistanceKm = ENV.MAX_DELIVERY_DISTANCE_KM ?? DEFAULTS.maxDeliveryDistanceKm;
-  const baseDeliveryFee = ENV.BASE_DELIVERY_FEE ?? DEFAULTS.baseDeliveryFee;
-  const deliveryFeePerKm = ENV.DELIVERY_FEE_PER_KM ?? DEFAULTS.deliveryFeePerKm;
+	const settings = await Settings.findOne({}).lean();
+	const freeDeliveryRadius =
+		settings && typeof settings.freeDeliveryRadius === 'number' ? settings.freeDeliveryRadius : DEFAULTS.freeDeliveryRadius;
+	const maxDeliveryRadius =
+		settings && typeof settings.maxDeliveryRadius === 'number' ? settings.maxDeliveryRadius : DEFAULTS.maxDeliveryRadius;
+	const extraChargePerKm =
+		settings && typeof settings.extraChargePerKm === 'number' ? settings.extraChargePerKm : DEFAULTS.extraChargePerKm;
 
   return {
     kitchen: { latitude: kitchenLatitude, longitude: kitchenLongitude },
     bufferFactor,
     roundDecimals,
-    freeDeliveryDistanceKm,
-    maxDeliveryDistanceKm,
-    baseDeliveryFee,
-    deliveryFeePerKm,
+		freeDeliveryRadius,
+		maxDeliveryRadius,
+		extraChargePerKm,
   };
 };
 
-const computeDeliveryFee = ({ distanceKm, freeDeliveryDistanceKm, baseDeliveryFee, deliveryFeePerKm }) => {
-  if (!Number.isFinite(distanceKm) || distanceKm < 0) return 0;
-  if (distanceKm <= freeDeliveryDistanceKm) return 0;
-  const payableKm = Math.max(0, distanceKm - freeDeliveryDistanceKm);
-  return Math.ceil(baseDeliveryFee + payableKm * deliveryFeePerKm);
-};
-
-const computeDistanceKmFromLocation = ({ latitude, longitude }) => {
-  const settings = getDeliverySettings();
+const computeDistanceKmFromLocation = async ({ latitude, longitude }) => {
+	const settings = await getDeliverySettings();
   const to = { latitude, longitude };
   if (!validateLatLng(to)) {
 		return { distanceKm: undefined, feeRules: settings };
@@ -71,22 +69,93 @@ const computeDistanceKmFromLocation = ({ latitude, longitude }) => {
 	return { distanceKm, feeRules: settings };
 };
 
-const computeDeliveryFromLocation = ({ latitude, longitude }) => {
-	const { distanceKm, feeRules } = computeDistanceKmFromLocation({ latitude, longitude });
+const computeDeliveryFromLocation = async ({ latitude, longitude }) => {
+	const { distanceKm, feeRules } = await computeDistanceKmFromLocation({ latitude, longitude });
 	if (!Number.isFinite(distanceKm)) {
 		return { distanceKm: undefined, isServiceable: false, deliveryFee: 0, feeRules };
 	}
 
-	const isServiceable = distanceKm <= feeRules.maxDeliveryDistanceKm;
-	const deliveryFee = isServiceable
-		? computeDeliveryFee({
-			distanceKm,
-			freeDeliveryDistanceKm: feeRules.freeDeliveryDistanceKm,
-			baseDeliveryFee: feeRules.baseDeliveryFee,
-			deliveryFeePerKm: feeRules.deliveryFeePerKm,
+	if (feeRules.maxDeliveryRadius && distanceKm > feeRules.maxDeliveryRadius) {
+		const err = new Error('Delivery location is outside service area');
+		err.statusCode = 400;
+		throw err;
+	}
+
+	const deliveryFee = calculateDeliveryCost(distanceKm, feeRules.freeDeliveryRadius, feeRules.extraChargePerKm);
+	return { distanceKm, isServiceable: true, deliveryFee, feeRules };
+};
+
+const addDaysISO = (iso, days) => {
+	const s = String(iso || '').trim();
+	if (!s) return '';
+	const dt = new Date(`${s}T00:00:00`);
+	if (Number.isNaN(dt.getTime())) return '';
+	dt.setDate(dt.getDate() + days);
+	const y = dt.getFullYear();
+	const m = String(dt.getMonth() + 1).padStart(2, '0');
+	const d = String(dt.getDate()).padStart(2, '0');
+	return `${y}-${m}-${d}`;
+};
+
+const normalizeOrderDetailsByItemId = (value) => {
+	if (!value || typeof value !== 'object') return {};
+	const out = {};
+	for (const [key, raw] of Object.entries(value)) {
+		if (!key) continue;
+		if (!raw || typeof raw !== 'object') continue;
+
+		const startDate = typeof raw.startDate === 'string' ? raw.startDate.trim() : undefined;
+		const deliveryTime = typeof raw.deliveryTime === 'string' ? raw.deliveryTime.trim() : undefined;
+		const deliveryShift = typeof raw.deliveryShift === 'string' ? raw.deliveryShift.trim().toUpperCase() : undefined;
+		const immediateDelivery = typeof raw.immediateDelivery === 'boolean' ? raw.immediateDelivery : undefined;
+
+		out[String(key)] = {
+			startDate: startDate || undefined,
+			deliveryTime: deliveryTime || undefined,
+			deliveryShift: deliveryShift || undefined,
+			immediateDelivery,
+		};
+	}
+	return out;
+};
+
+const PLAN_DAYS = {
+	single: 1,
+	trial: 3,
+	weekly: 7,
+	monthly: 30,
+};
+
+const buildSubscriptionsForDeliveryFee = ({ items, orderDetailsByItemId }) => {
+	const normalized = Array.isArray(items) ? items : [];
+	const detailsById = normalizeOrderDetailsByItemId(orderDetailsByItemId);
+	const today = getKolkataISODate();
+
+	return normalized
+		.map((item) => {
+			const cartItemId = String(item?.cartItemId || item?.id || '').trim();
+			const details = detailsById[cartItemId] || {};
+			const plan = String(item?.plan || '').trim().toLowerCase();
+
+			const immediate = Boolean(details.immediateDelivery);
+			const startDate = details.startDate || (immediate ? today : undefined);
+			if (!startDate) return null;
+
+			let deliveryTime = details.deliveryTime;
+			if (!deliveryTime) {
+				const shift = normalizeShift(details.deliveryShift);
+				const meta = shift ? getShiftMeta(shift) : undefined;
+				deliveryTime = meta?.start;
+			}
+			if (!deliveryTime) return null;
+
+			const days = PLAN_DAYS[plan] || 1;
+			const endDate = addDaysISO(startDate, Math.max(1, days) - 1);
+			if (!endDate) return null;
+
+			return { start_date: startDate, end_date: endDate, delivery_time: deliveryTime };
 		})
-		: 0;
-	return { distanceKm, isServiceable, deliveryFee, feeRules };
+		.filter(Boolean);
 };
 
 const getByoConfig = async () => {
@@ -165,32 +234,8 @@ const computeByoQuote = async ({ plan, selections }) => {
   return { total, lineItems, proteinGrams, calories };
 };
 
-const getPricingPlanPrice = (pricing, plan) => {
-	if (!pricing || !plan) return 0;
-	const tier = pricing?.[plan];
-	// Legacy compatibility: some older docs stored numbers directly.
-	if (typeof tier === 'number') return Number.isFinite(tier) ? tier : 0;
-	return Number(tier?.price ?? 0);
-};
 
-const getMealUnitPrice = ({ meal, plan }) => {
-	// Pricing authority is server-side. We try default pricing first, then fall back
-	// to protein-mode pricing if default pricing is missing/zero.
-	if (!meal) return 0;
-
-	const fromDefault = getPricingPlanPrice(meal.pricing, plan);
-	if (fromDefault > 0) return fromDefault;
-
-	// Backward-safe fallback: if admins configured only proteinPricing, don’t return 0.
-	const fromWith = getPricingPlanPrice(meal.proteinPricing?.withProtein, plan);
-	if (fromWith > 0) return fromWith;
-	const fromWithout = getPricingPlanPrice(meal.proteinPricing?.withoutProtein, plan);
-	if (fromWithout > 0) return fromWithout;
-
-	return 0;
-};
-
-const quoteCartData = async ({ userId, items, creditsToApply, deliveryLocation }) => {
+const quoteCartData = async ({ userId, items, creditsToApply, deliveryLocation, orderDetailsByItemId }) => {
 	const normalizedItems = Array.isArray(items) ? items : [];
 	const creditsRequested = toFiniteNumber(creditsToApply) ?? 0;
 	const location = deliveryLocation && typeof deliveryLocation === 'object' ? deliveryLocation : null;
@@ -238,20 +283,7 @@ const quoteCartData = async ({ userId, items, creditsToApply, deliveryLocation }
 
 	let delivery = { distanceKm: undefined, isServiceable: true, deliveryFee: 0, feeRules: undefined };
 	if (latitude !== undefined && longitude !== undefined) {
-		delivery = computeDeliveryFromLocation({ latitude, longitude });
-		if (!delivery.isServiceable) {
-			return {
-				items: [],
-				subtotal: 0,
-				deliveryFee: 0,
-				distanceKm: delivery.distanceKm,
-				isServiceable: false,
-				creditsApplied: 0,
-				total: 0,
-				deliveryLocation: { latitude, longitude, address: addressText },
-				reason: 'outside_delivery_area',
-			};
-		}
+		delivery = await computeDeliveryFromLocation({ latitude, longitude });
 	}
 
 	// Trial enforcement (only if authenticated)
@@ -398,7 +430,13 @@ const quoteCartData = async ({ userId, items, creditsToApply, deliveryLocation }
 		}
 	}
 
-	const deliveryFee = Number(delivery.deliveryFee || 0);
+	let deliveryFee = Number(delivery.deliveryFee || 0);
+	if (deliveryFee > 0) {
+		const subscriptions = buildSubscriptionsForDeliveryFee({ items: normalizedItems, orderDetailsByItemId });
+		if (subscriptions.length) {
+			deliveryFee = calculateDeliveryFee(subscriptions, deliveryFee);
+		}
+	}
 	let creditsApplied = Math.max(0, creditsRequested);
 	creditsApplied = Math.min(creditsApplied, subtotal + deliveryFee);
 	if (userId) {
@@ -428,6 +466,7 @@ const quoteCart = async (req, res, next) => {
 			items: req.body?.items,
 			creditsToApply: req.body?.creditsToApply,
 			deliveryLocation: req.body?.deliveryLocation,
+			orderDetailsByItemId: req.body?.orderDetailsByItemId,
 		});
 		return res.json({ status: 'success', data });
 	} catch (err) {

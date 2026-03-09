@@ -36,7 +36,8 @@
     "smoke:byo:seed": "node src/scripts/smokeByoSeedAndFetch.js",
     "smoke:distance": "node src/scripts/smokeDistanceEngine.js",
     "smoke:webhook": "node scripts/testRazorpayWebhook.js",
-    "test": "echo \"No tests yet\""
+    "migrate:delivery-shifts": "node src/scripts/migrateDeliveryShifts.js",
+    "test": "node src/tests/runTests.js"
   },
   "dependencies": {
     "cloudinary": "^2.8.0",

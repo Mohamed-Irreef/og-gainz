@@ -61,6 +61,7 @@ export const cartCheckoutService = {
 				if (i.type === 'addon') return { cartItemId: i.id, type: i.type, plan: i.plan, addonId: i.addonId, quantity: i.quantity };
 				return { cartItemId: i.id, type: i.type, plan: i.plan, selections: i.selections, quantity: i.quantity };
 			}),
+			orderDetailsByItemId: state.orderDetailsByItemId,
 			creditsToApply: state.creditsToApply,
 			deliveryLocation: state.deliveryLocation,
 		};

@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSafeBack } from '@/hooks/use-safe-back';
 import { adminOrdersService, type AdminOrder, type AdminOrderAcceptanceStatus } from '@/services/adminOrdersService';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { formatShiftLabel, normalizeShift, resolveShiftFromTime } from '@/utils/deliveryShift';
 import { statusBadgeClass as globalStatusBadgeClass, statusLabel } from '@/utils/statusUi';
 
 const safeString = (v: unknown) => String(v || '').trim();
@@ -322,8 +323,12 @@ export default function OrderDetails() {
 										<div>
 											<div className="font-medium">{it.pricingSnapshot?.title || it.type}</div>
 											<div className="text-xs text-muted-foreground">{it.type.toUpperCase()} • {it.plan} • Qty {it.quantity}</div>
-											{it.orderDetails?.startDate || it.orderDetails?.deliveryTime ? (
-												<div className="text-xs text-muted-foreground">Schedule: {it.orderDetails?.startDate || '—'} at {it.orderDetails?.deliveryTime || '—'}</div>
+											{it.orderDetails?.startDate || it.orderDetails?.deliveryShift || it.orderDetails?.deliveryTime ? (
+												<div className="text-xs text-muted-foreground">
+													Schedule: {it.orderDetails?.startDate || '—'} · {formatShiftLabel(
+														normalizeShift(it.orderDetails?.deliveryShift) || resolveShiftFromTime(it.orderDetails?.deliveryTime)
+													)}
+												</div>
 											) : null}
 											{it.subscriptionProgress ? (
 												<div className="text-xs text-muted-foreground">

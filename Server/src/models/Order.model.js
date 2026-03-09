@@ -37,6 +37,7 @@ const OrderItemSchema = new mongoose.Schema(
     orderDetails: {
       startDate: { type: String, required: false },
       deliveryTime: { type: String, required: false },
+      deliveryShift: { type: String, required: false, enum: ['MORNING', 'AFTERNOON', 'EVENING'] },
       immediateDelivery: { type: Boolean, required: false },
     },
   },

@@ -26,6 +26,16 @@ import { deliveriesService, type MyDelivery, type DeliveryStatus } from '@/servi
 import { pauseSkipService } from '@/services/pauseSkipService';
 import type { PauseSkipRequest } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import {
+	DELIVERY_SHIFT_META,
+	buildKolkataDateTime,
+	formatShiftLabel,
+	getKolkataISODate,
+	getKolkataNow,
+	getShiftSortIndex,
+	normalizeShift,
+	resolveShiftFromTime,
+} from '@/utils/deliveryShift';
 
 const safeString = (v: unknown) => String(v || '').trim();
 
@@ -61,68 +71,6 @@ const statusBadgeClass = (status: DeliveryStatus) => {
 	}
 };
 
-const SKIP_REQUEST_CUTOFF_MINUTES = (() => {
-	const raw = Number((import.meta as unknown as { env?: Record<string, unknown> })?.env?.VITE_SKIP_REQUEST_CUTOFF_MINUTES);
-	if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
-	return 120;
-})();
-
-const formatCutoff = (minutes: number) => {
-	const m = Math.max(1, Math.floor(minutes));
-	if (m % 60 === 0) {
-		const h = m / 60;
-		return `${h} hour${h === 1 ? '' : 's'}`;
-	}
-	return `${m} minute${m === 1 ? '' : 's'}`;
-};
-
-const parseLocalISODate = (value: string) => {
-	const s = safeString(value);
-	const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(s);
-	if (!m) return undefined;
-	const y = Number(m[1]);
-	const mo = Number(m[2]);
-	const d = Number(m[3]);
-	if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return undefined;
-	const dt = new Date(y, mo - 1, d);
-	if (Number.isNaN(dt.getTime())) return undefined;
-	return dt;
-};
-
-const parseTimeToHHmm = (value: string) => {
-	const s = safeString(value);
-	if (!s) return undefined;
-	// 24h: HH:mm
-	let m = /^([0-9]{1,2}):([0-9]{2})$/.exec(s);
-	if (m) {
-		const hh = Number(m[1]);
-		const mm = Number(m[2]);
-		if (!Number.isFinite(hh) || !Number.isFinite(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return undefined;
-		return { hh, mm };
-	}
-	// 12h: h:mm AM/PM
-	m = /^([0-9]{1,2}):([0-9]{2})\s*(AM|PM)$/i.exec(s);
-	if (m) {
-		let hh = Number(m[1]);
-		const mm = Number(m[2]);
-		const mer = String(m[3] || '').toUpperCase();
-		if (!Number.isFinite(hh) || !Number.isFinite(mm) || hh < 1 || hh > 12 || mm < 0 || mm > 59) return undefined;
-		if (mer === 'AM') hh = hh === 12 ? 0 : hh;
-		if (mer === 'PM') hh = hh === 12 ? 12 : hh + 12;
-		return { hh, mm };
-	}
-	return undefined;
-};
-
-const getLocalScheduledDateTime = (dateISO: string, timeStr: string) => {
-	const date = parseLocalISODate(dateISO);
-	const tm = parseTimeToHHmm(timeStr);
-	if (!date || !tm) return undefined;
-	const dt = new Date(date);
-	dt.setHours(tm.hh, tm.mm, 0, 0);
-	if (Number.isNaN(dt.getTime())) return undefined;
-	return dt;
-};
 
 const isWithinInclusiveISODateRange = (dateISO: string, startISO?: string, endISO?: string) => {
 	if (!startISO || !endISO) return false;
@@ -138,7 +86,7 @@ export default function Deliveries() {
 		toast({ title: 'This feature will be coming soon.' });
 	};
 
-	const [selectedDate, setSelectedDate] = useState(() => toLocalISODate(new Date()));
+	const [selectedDate, setSelectedDate] = useState(() => getKolkataISODate());
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [deliveries, setDeliveries] = useState<MyDelivery[]>([]);
@@ -154,12 +102,12 @@ export default function Deliveries() {
 	const [viewDelivery, setViewDelivery] = useState<MyDelivery | null>(null);
 
 	const windowFrom = useMemo(() => {
-		const today = new Date();
+		const today = getKolkataNow();
 		return toLocalISODate(today);
 	}, []);
 
 	const windowTo = useMemo(() => {
-		const today = new Date();
+		const today = getKolkataNow();
 		return toLocalISODate(addDays(today, 13));
 	}, []);
 
@@ -287,7 +235,7 @@ export default function Deliveries() {
 	};
 
 	const canRequestSkip = (d: MyDelivery) => {
-		const now = new Date();
+		const now = getKolkataNow();
 		const todayISO = toLocalISODate(now);
 		const id = safeString(d._id || d.id);
 		if (!id) return { ok: false, reason: 'Invalid delivery' };
@@ -295,12 +243,13 @@ export default function Deliveries() {
 		if (d.status !== 'PENDING') return { ok: false, reason: `Cannot request skip when status is ${d.status}` };
 		if (pendingSkipByDeliveryId.has(id)) return { ok: false, reason: 'A skip request for this delivery is already pending.' };
 
-		const scheduled = getLocalScheduledDateTime(safeString(d.date), safeString(d.time));
-		if (!scheduled) return { ok: false, reason: 'Delivery time is unavailable for this delivery.' };
-		const cutoff = new Date(scheduled);
-		cutoff.setMinutes(cutoff.getMinutes() - SKIP_REQUEST_CUTOFF_MINUTES);
+		const shiftKey = normalizeShift(d.deliveryShift) || resolveShiftFromTime(d.time);
+		const meta = shiftKey ? DELIVERY_SHIFT_META[shiftKey] : undefined;
+		if (!meta) return { ok: false, reason: 'Delivery shift is unavailable for this delivery.' };
+		const cutoff = buildKolkataDateTime(safeString(d.date), meta.skipCutoff);
+		if (!cutoff) return { ok: false, reason: 'Delivery cutoff time is unavailable for this delivery.' };
 		if (now.getTime() >= cutoff.getTime()) {
-			return { ok: false, reason: `Skip requests must be made at least ${formatCutoff(SKIP_REQUEST_CUTOFF_MINUTES)} before delivery.` };
+			return { ok: false, reason: `Skip requests must be made before ${meta.skipCutoff} for ${meta.label} shift.` };
 		}
 
 		const subId = safeString(d.subscriptionId);
@@ -389,7 +338,13 @@ export default function Deliveries() {
 			map.get(key)!.push(d);
 		}
 		for (const [k, arr] of map.entries()) {
-			arr.sort((a, b) => safeString(a.time).localeCompare(safeString(b.time)));
+			arr.sort((a, b) => {
+				const shiftA = normalizeShift(a.deliveryShift) || resolveShiftFromTime(a.time);
+				const shiftB = normalizeShift(b.deliveryShift) || resolveShiftFromTime(b.time);
+				const shiftCmp = getShiftSortIndex(shiftA) - getShiftSortIndex(shiftB);
+				if (shiftCmp !== 0) return shiftCmp;
+				return safeString(a.time).localeCompare(safeString(b.time));
+			});
 			map.set(k, arr);
 		}
 		return map;
@@ -449,13 +404,19 @@ export default function Deliveries() {
 								const pendingSkip = id ? pendingSkipByDeliveryId.get(id) : undefined;
 								const approvedSkip = id ? approvedSkipByDeliveryId.get(id) : undefined;
 								const skipEligibility = canRequestSkip(d);
-								const showStatusBadge = !(activePause && d.status === 'PENDING');
-												const isToday = safeString(d.date) === toLocalISODate(new Date());
+									const showStatusBadge = !(activePause && d.status === 'PENDING');
+									const shiftKey = normalizeShift(d.deliveryShift) || resolveShiftFromTime(d.time);
+									const shiftMeta = shiftKey ? DELIVERY_SHIFT_META[shiftKey] : undefined;
 								return (
 									<div key={id} className="rounded-lg border border-oz-neutral/40 p-4 space-y-2">
 										<div className="flex items-center justify-between gap-3">
-											<div className="font-medium">{d.time}</div>
+												<div className="font-medium">
+													{shiftKey ? formatShiftLabel(shiftKey) : safeString(d.time) || '—'}
+												</div>
 											<div className="flex items-center gap-2">
+													{shiftMeta ? (
+														<Badge variant="outline" className={shiftMeta.softClass}>{shiftMeta.icon} {shiftMeta.label}</Badge>
+													) : null}
 												{pendingSkip ? (
 													<Badge variant="outline" className="bg-yellow-100 text-yellow-900 border-yellow-200">Skip Requested</Badge>
 												) : null}
@@ -589,7 +550,9 @@ export default function Deliveries() {
 								<div className="rounded-md border p-3">
 									<div className="text-xs text-muted-foreground">Date</div>
 									<div className="text-sm font-medium">{safeString(viewDelivery.date) || '—'}</div>
-									<div className="text-xs text-muted-foreground mt-1">Time: {safeString(viewDelivery.time) || '—'}</div>
+												<div className="text-xs text-muted-foreground mt-1">
+													Delivery shift: {formatShiftLabel(normalizeShift(viewDelivery.deliveryShift) || resolveShiftFromTime(viewDelivery.time))}
+												</div>
 								</div>
 								<div className="rounded-md border p-3">
 									<div className="text-xs text-muted-foreground">Status</div>

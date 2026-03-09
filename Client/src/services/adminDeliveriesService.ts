@@ -8,6 +8,7 @@ export type AdminDailyDelivery = {
 	id?: string;
 	date: string;
 	time: string;
+	deliveryShift?: 'MORNING' | 'AFTERNOON' | 'EVENING';
 	userId?: string;
 	address?: {
 		label?: string;
