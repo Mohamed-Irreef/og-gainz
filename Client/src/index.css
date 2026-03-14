@@ -251,16 +251,83 @@
     text-wrap: balance;
   }
 
-  /* Ensure orange CTA text stays white on hover */
-  .bg-oz-accent:hover,
-  .hover\:bg-oz-accent\/90:hover {
-    color: #fff;
+  /* Comprehensive fix for all brand buttons/elements to ensure white text and icons */
+  /* Solid backgrounds (excluding low-opacity markers and hover-only classes) */
+  [class*="bg-oz-accent"]:not([class*="/5"]):not([class*="/10"]):not([class*="/20"]):not([class*="hover:"]):not([class*="focus:"]),
+  [class*="bg-oz-primary"]:not([class*="/5"]):not([class*="/10"]):not([class*="/20"]):not([class*="hover:"]):not([class*="focus:"]),
+  [class*="bg-oz-secondary"]:not([class*="/5"]):not([class*="/10"]):not([class*="/20"]):not([class*="hover:"]):not([class*="focus:"]),
+  [class*="bg-accent"]:not([class*="/5"]):not([class*="/10"]):not([class*="/20"]):not([class*="hover:"]):not([class*="focus:"]),
+  [class*="bg-green-600"]:not([class*="hover:"]),
+  [class*="bg-emerald-500"]:not([class*="hover:"]),
+  .bg-oz-accent,
+  .bg-oz-primary,
+  .bg-oz-secondary,
+  .bg-accent,
+  [class*="from-oz-accent"],
+  [class*="to-oz-accent"] {
+    color: #ffffff !important;
   }
 
-  /* Admin-only: force white text on orange buttons when hovering */
-  .oz-admin .bg-oz-accent:hover,
-  .oz-admin .hover\:bg-oz-accent\/90:hover {
-    color: #fff;
+  /* Handle hover states specifically */
+  [class*="bg-oz-accent"]:hover,
+  [class*="bg-oz-primary"]:hover,
+  [class*="bg-oz-secondary"]:hover,
+  [class*="bg-accent"]:hover,
+  [class*="hover:bg-oz-accent"]:hover,
+  [class*="hover:bg-oz-primary"]:hover,
+  [class*="hover:bg-oz-secondary"]:hover,
+  [class*="hover:bg-accent"]:hover,
+  [class*="bg-green-600"]:hover,
+  [class*="bg-emerald-500"]:hover,
+  [class*="hover:bg-green-600"]:hover,
+  [class*="hover:bg-emerald-500"]:hover {
+    color: #ffffff !important;
+  }
+
+  /* Target icons (SVG) inside any brand-background element */
+  [class*="bg-oz-accent"]:not([class*="/5"]):not([class*="/10"]):not([class*="/20"]) svg,
+  [class*="bg-oz-primary"]:not([class*="/5"]):not([class*="/10"]):not([class*="/20"]) svg,
+  [class*="bg-oz-secondary"]:not([class*="/5"]):not([class*="/10"]):not([class*="/20"]) svg,
+  [class*="bg-accent"]:not([class*="/5"]):not([class*="/10"]):not([class*="/20"]) svg,
+  [class*="bg-green-600"] svg,
+  [class*="bg-emerald-500"] svg,
+  .bg-oz-accent svg,
+  .bg-oz-primary svg,
+  .bg-oz-secondary svg,
+  .bg-accent svg,
+  [class*="from-oz-accent"] svg,
+  [class*="to-oz-accent"] svg,
+  /* Handle icons on hover */
+  [class*="bg-oz-accent"]:hover svg,
+  [class*="bg-oz-primary"]:hover svg,
+  [class*="bg-oz-secondary"]:hover svg,
+  [class*="bg-accent"]:hover svg,
+  [class*="hover:bg-oz-accent"]:hover svg,
+  [class*="hover:bg-oz-primary"]:hover svg,
+  [class*="hover:bg-oz-secondary"]:hover svg,
+  [class*="hover:bg-accent"]:hover svg,
+  [class*="bg-green-600"]:hover svg,
+  [class*="bg-emerald-500"]:hover svg {
+    stroke: #ffffff !important;
+    color: #ffffff !important;
+  }
+
+  /* Specific fix for filled icons on brand backgrounds */
+  [class*="bg-oz-accent"] svg[fill]:not([fill="none"]),
+  [class*="bg-oz-primary"] svg[fill]:not([fill="none"]),
+  [class*="bg-oz-secondary"] svg[fill]:not([fill="none"]),
+  [class*="bg-accent"] svg[fill]:not([fill="none"]),
+  [class*="from-oz-accent"] svg[fill]:not([fill="none"]),
+  [class*="to-oz-accent"] svg[fill]:not([fill="none"]),
+  [class*="bg-oz-accent"]:hover svg[fill]:not([fill="none"]),
+  [class*="bg-oz-primary"]:hover svg[fill]:not([fill="none"]),
+  [class*="bg-oz-secondary"]:hover svg[fill]:not([fill="none"]),
+  [class*="bg-accent"]:hover svg[fill]:not([fill="none"]),
+  [class*="hover:bg-oz-accent"]:hover svg[fill]:not([fill="none"]),
+  [class*="hover:bg-oz-primary"]:hover svg[fill]:not([fill="none"]),
+  [class*="hover:bg-oz-secondary"]:hover svg[fill]:not([fill="none"]),
+  [class*="hover:bg-accent"]:hover svg[fill]:not([fill="none"]) {
+    fill: #ffffff !important;
   }
 }
 

@@ -25,7 +25,7 @@ const Cart = () => {
 	const [addressText] = useState(state.deliveryLocation?.address ?? '');
 
 	const quoteByCartItemId = useMemo(() => {
-		const map = new Map<string, (typeof quote.items)[number]>();
+		const map = new Map<string, NonNullable<typeof quote>['items'][number]>();
 		for (const qi of quote?.items || []) map.set(qi.cartItemId, qi);
 		return map;
 	}, [quote]);
@@ -88,7 +88,7 @@ const Cart = () => {
 
 	const isTrialRepeatError = (quoteError || '').toLowerCase().includes('trial already used');
 	const hasLocation = Boolean(state.deliveryLocation?.latitude != null && state.deliveryLocation?.longitude != null);
-	const ordersPaused = true;
+
 	const baseDeliveryFee = quote?.deliveryFee ?? 0;
 	const computedDeliveryFee = hasLocation && quote ? baseDeliveryFee : 0;
 	const computedTotal = quote ? quote.subtotal + computedDeliveryFee - (quote.creditsApplied || 0) : 0;
@@ -178,7 +178,7 @@ const Cart = () => {
 						})}
 
 						<div className="flex justify-end">
-							<Button variant="ghost" onClick={clearCart} className="text-muted-foreground hover:text-destructive">
+							<Button onClick={clearCart} className="bg-oz-accent hover:bg-oz-accent/90 text-white">
 								<Trash2 className="mr-2 h-4 w-4" />
 								Clear Cart
 							</Button>
@@ -288,16 +288,10 @@ const Cart = () => {
 										</div>
 									</div>
 
-									{ordersPaused && (
-										<div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-											Orders will be taken from 18 Feb 2026.
-										</div>
-									)}
-
 									<Button
 										onClick={handleCheckout}
 										className="w-full mt-6 bg-oz-accent hover:bg-oz-accent/90 h-12 text-lg"
-										disabled={ordersPaused || isQuoting || !hasLocation || (quote ? !quote.isServiceable : false)}
+										disabled={isQuoting || !hasLocation || (quote ? !quote.isServiceable : false)}
 									>
 										Proceed to Order Details
 										<ArrowRight className="ml-2 h-5 w-5" />
