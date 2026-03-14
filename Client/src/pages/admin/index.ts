@@ -19,3 +19,7 @@ export { default as AdminUsers } from './Users';
 export { default as AdminUserDetails } from './UserDetails';
 export { default as AdminWallet } from './Wallet';
 export { default as AdminSettings } from './Settings';
+
+export { default as AdminBlogs } from './Blogs';
+export { default as AdminBlogForm } from './BlogForm';
+export { default as AdminBlogView } from './BlogView';

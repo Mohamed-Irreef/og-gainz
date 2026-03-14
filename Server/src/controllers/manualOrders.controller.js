@@ -3,12 +3,14 @@ const mongoose = require('mongoose');
 const ManualOrder = require('../models/ManualOrder.model');
 const MealPack = require('../models/MealPack.model');
 const Addon = require('../models/Addon.model');
+const BuildYourOwnItem = require('../models/BuildYourOwnItem.model');
+const BuildYourOwnConfig = require('../models/BuildYourOwnConfig.model');
 const Settings = require('../models/Settings.model');
 const User = require('../models/User.model');
 const Order = require('../models/Order.model');
 const DailyDelivery = require('../models/DailyDelivery.model');
 const logger = require('../utils/logger.util');
-const { getMealUnitPrice, getAddonUnitPrice } = require('../utils/mealPricing.util');
+const { getMealUnitPrice, getAddonUnitPrice, getByoItemUnitPrice } = require('../utils/mealPricing.util');
 const { calculateDeliveryCost } = require('../utils/deliveryCostCalculator');
 const { calculateDeliveryFee } = require('../services/deliveryFeeCalculator');
 const {
@@ -50,8 +52,8 @@ const addDaysISO = (iso, days) => {
   return toISODate(dt) || '';
 };
 
-const buildDeliveryFeeSubscriptions = ({ mealItems, addonItems, fallbackStartDate }) => {
-  const allItems = [...(mealItems || []), ...(addonItems || [])];
+const buildDeliveryFeeSubscriptions = ({ mealItems, addonItems, byoItems, fallbackStartDate }) => {
+  const allItems = [...(mealItems || []), ...(addonItems || []), ...(byoItems || [])];
   return allItems
     .map((item) => {
       const startDate = toISODate(item.start_date || fallbackStartDate);
@@ -139,6 +141,7 @@ const findOrCreateUser = async ({ customerName, phoneNumber, address }) => {
 const parseItems = async ({
   rawMeals,
   rawAddons,
+  rawByo,
   defaultSubscriptionType,
   defaultDeliveryTime,
   defaultTrialDays,
@@ -146,15 +149,13 @@ const parseItems = async ({
 }) => {
   const mealSelections = Array.isArray(rawMeals) ? rawMeals : [];
   const addonSelections = Array.isArray(rawAddons) ? rawAddons : [];
+  const byoSelections = Array.isArray(rawByo) ? rawByo : [];
 
-  const mealIds = mealSelections
-    .map((m) => safeString(m?.mealId || m?.id))
-    .filter(Boolean);
-  const addonIds = addonSelections
-    .map((a) => safeString(a?.addonId || a?.id))
-    .filter(Boolean);
+  const mealIds = mealSelections.map((m) => safeString(m?.mealId || m?.id)).filter(Boolean);
+  const addonIds = addonSelections.map((a) => safeString(a?.addonId || a?.id)).filter(Boolean);
+  const byoIds = byoSelections.map((b) => safeString(b?.addonId || b?.byoId || b?.id)).filter(Boolean);
 
-  const [meals, addons] = await Promise.all([
+  const [meals, addons, byoItemsList] = await Promise.all([
     mealIds.length
       ? MealPack.find({ _id: { $in: mealIds }, isActive: true, deletedAt: { $exists: false } })
           .select({ name: 1, pricing: 1, proteinPricingMode: 1, proteinPricing: 1, isTrialEligible: 1 })
@@ -165,10 +166,16 @@ const parseItems = async ({
           .select({ name: 1, pricing: 1 })
           .lean()
       : Promise.resolve([]),
+    byoIds.length
+      ? BuildYourOwnItem.find({ _id: { $in: byoIds }, isActive: true, deletedAt: { $exists: false } })
+          .select({ name: 1, pricing: 1 })
+          .lean()
+      : Promise.resolve([]),
   ]);
 
   const mealsById = new Map(meals.map((m) => [String(m._id), m]));
   const addonsById = new Map(addons.map((a) => [String(a._id), a]));
+  const byoItemsById = new Map(byoItemsList.map((b) => [String(b._id), b]));
 
   const mealItems = [];
   let mealCost = 0;
@@ -256,7 +263,48 @@ const parseItems = async ({
     });
   });
 
-  return { mealItems, addonItems, mealCost, addonCost };
+  const byoItems = [];
+  let byoCost = 0;
+
+  byoSelections.forEach((sel, index) => {
+    const byoId = safeString(sel?.addonId || sel?.byoId || sel?.id);
+    if (!byoId) return;
+    const byoItem = byoItemsById.get(byoId);
+    if (!byoItem) throw new Error(`Invalid byoId: ${byoId}`);
+
+    const subscriptionType = safeString(sel?.subscriptionType || defaultSubscriptionType).toLowerCase();
+    if (!['trial', 'weekly', 'monthly'].includes(subscriptionType)) {
+      throw new Error(`Invalid subscription type for BYO item ${byoItem.name}`);
+    }
+
+    const quantity = Math.max(1, toInt(sel?.quantity, 1));
+    const plan = mapSubscriptionTypeToPlan(subscriptionType);
+    const unitPrice = getByoItemUnitPrice({ byoItem, plan });
+    if (!(unitPrice > 0)) throw new Error(`BYO item not available for ${plan}: ${byoItem.name}`);
+
+    const trialDays = toInt(sel?.trialDays, defaultTrialDays);
+    const subscriptionDays = normalizeSubscriptionDays({ subscriptionType, trialDays });
+    const deliveryTime = normalizeTime(sel?.deliveryTime || defaultDeliveryTime) || '12:00';
+    const startDate = toISODate(sel?.startDate) || toISODate(defaultStartDate) || toISODate(new Date());
+
+    const lineTotal = unitPrice * quantity;
+    byoCost += lineTotal;
+    byoItems.push({
+      itemId: `byo-${byoId}-${index}`,
+      sourceId: byoItem._id,
+      type: 'byo',
+      name: byoItem.name,
+      quantity,
+      unit_price: unitPrice,
+      line_total: lineTotal,
+      subscription_type: subscriptionType,
+      subscription_days: subscriptionDays,
+      delivery_time: deliveryTime,
+      start_date: startDate,
+    });
+  });
+
+  return { mealItems, addonItems, byoItems, mealCost, addonCost, byoCost };
 };
 
 const buildAuditEntry = ({ action, adminId, changes }) => ({
@@ -315,17 +363,18 @@ const createManualOrder = async (req, res, next) => {
     const deliveriesPerDay = Math.max(1, toInt(req.body?.deliveriesPerDay, 1));
     const distanceKm = Math.max(0, toNumber(req.body?.distanceKm));
 
-    const { mealItems, addonItems, mealCost, addonCost } = await parseItems({
+    const { mealItems, addonItems, byoItems, mealCost, addonCost, byoCost } = await parseItems({
       rawMeals: req.body?.mealItems,
       rawAddons: req.body?.addonItems,
+      rawByo: req.body?.byoItems,
       defaultSubscriptionType: subscriptionType,
       defaultDeliveryTime: deliveryTime,
       defaultTrialDays: trialDays,
       defaultStartDate: startDate,
     });
 
-    if (!mealItems.length && !addonItems.length) {
-      return res.status(400).json({ status: 'error', message: 'Select at least one meal or add-on' });
+    if (!mealItems.length && !addonItems.length && !byoItems.length) {
+      return res.status(400).json({ status: 'error', message: 'Select at least one meal, add-on, or BYO item' });
     }
 
     const deliverySettings = await getDeliverySettings();
@@ -340,11 +389,12 @@ const createManualOrder = async (req, res, next) => {
     const deliveryFeeSubscriptions = buildDeliveryFeeSubscriptions({
       mealItems,
       addonItems,
+      byoItems,
       fallbackStartDate: startDate,
     });
     const totalDeliveryFee = calculateDeliveryFee(deliveryFeeSubscriptions, singleDeliveryCost);
 
-    const grandTotal = mealCost + addonCost + totalDeliveryFee;
+    const grandTotal = mealCost + addonCost + byoCost + totalDeliveryFee;
 
     const user = await findOrCreateUser({ customerName, phoneNumber, address });
 
@@ -367,8 +417,10 @@ const createManualOrder = async (req, res, next) => {
       start_date: startDate,
       meal_items: mealItems,
       addon_items: addonItems,
+      byo_items: byoItems,
       meal_cost: mealCost,
       addon_cost: addonCost,
+      byo_cost: byoCost,
       delivery_cost_total: totalDeliveryFee,
       grand_total: grandTotal,
       payment_status: 'PENDING',
@@ -434,18 +486,29 @@ const updateManualOrder = async (req, res, next) => {
         startDate: item.start_date,
       }))
       : [];
+    const fallbackByo = Array.isArray(manualOrder.byo_items)
+      ? manualOrder.byo_items.map((item) => ({
+        byoId: item.sourceId,
+        quantity: item.quantity,
+        subscriptionType: item.subscription_type,
+        deliveryTime: item.delivery_time,
+        trialDays: item.subscription_days,
+        startDate: item.start_date,
+      }))
+      : [];
 
-    const { mealItems, addonItems, mealCost, addonCost } = await parseItems({
+    const { mealItems, addonItems, byoItems, mealCost, addonCost, byoCost } = await parseItems({
       rawMeals: req.body?.mealItems ?? fallbackMeals,
       rawAddons: req.body?.addonItems ?? fallbackAddons,
+      rawByo: req.body?.byoItems ?? fallbackByo,
       defaultSubscriptionType: subscriptionType,
       defaultDeliveryTime: deliveryTime,
       defaultTrialDays: trialDays,
       defaultStartDate: startDate,
     });
 
-    if (!mealItems.length && !addonItems.length) {
-      return res.status(400).json({ status: 'error', message: 'Select at least one meal or add-on' });
+    if (!mealItems.length && !addonItems.length && !byoItems.length) {
+      return res.status(400).json({ status: 'error', message: 'Select at least one meal, add-on, or BYO item' });
     }
 
     const deliverySettings = await getDeliverySettings();
@@ -460,11 +523,12 @@ const updateManualOrder = async (req, res, next) => {
     const deliveryFeeSubscriptions = buildDeliveryFeeSubscriptions({
       mealItems,
       addonItems,
+      byoItems,
       fallbackStartDate: startDate,
     });
     const totalDeliveryFee = calculateDeliveryFee(deliveryFeeSubscriptions, singleDeliveryCost);
 
-    const grandTotal = mealCost + addonCost + totalDeliveryFee;
+    const grandTotal = mealCost + addonCost + byoCost + totalDeliveryFee;
 
     const updates = {
       customer_name: customerName,
@@ -482,8 +546,10 @@ const updateManualOrder = async (req, res, next) => {
       start_date: startDate,
       meal_items: mealItems,
       addon_items: addonItems,
+      byo_items: byoItems,
       meal_cost: mealCost,
       addon_cost: addonCost,
+      byo_cost: byoCost,
       delivery_cost_total: totalDeliveryFee,
       grand_total: grandTotal,
     };
@@ -574,7 +640,7 @@ const getManualOrderBill = async (req, res, next) => {
 
 const buildOrderItemsFromManual = ({ manualOrder }) => {
   const items = [];
-  const allItems = [...(manualOrder.meal_items || []), ...(manualOrder.addon_items || [])];
+  const allItems = [...(manualOrder.meal_items || []), ...(manualOrder.addon_items || []), ...(manualOrder.byo_items || [])];
   allItems.forEach((item) => {
     const subscriptionType = String(item.subscription_type || manualOrder.subscription_type || 'weekly').toLowerCase();
     const plan = mapSubscriptionTypeToPlan(subscriptionType);
@@ -594,7 +660,8 @@ const buildOrderItemsFromManual = ({ manualOrder }) => {
       plan,
       mealId: item.type === 'meal' ? item.sourceId : undefined,
       addonId: item.type === 'addon' ? item.sourceId : undefined,
-      quantity: item.quantity,
+      byoSelections: item.type === 'byo' ? [{ itemId: item.sourceId, quantity: item.quantity }] : undefined,
+      quantity: item.type === 'byo' ? 1 : item.quantity, // Byo uses root quantity 1 usually, selections hold actual qty. But wait, we can just map it safely keeping quantity.
       pricingSnapshot: {
         title: item.name,
         unitPrice: item.unit_price,
@@ -614,7 +681,7 @@ const buildDailyDeliveryDocs = ({ manualOrder, orderId }) => {
   });
 
   const docs = [];
-  const allItems = [...(manualOrder.meal_items || []), ...(manualOrder.addon_items || [])];
+  const allItems = [...(manualOrder.meal_items || []), ...(manualOrder.addon_items || []), ...(manualOrder.byo_items || [])];
   allItems.forEach((item) => {
     const subscriptionType = String(item.subscription_type || manualOrder.subscription_type || 'weekly').toLowerCase();
     const plan = mapSubscriptionTypeToPlan(subscriptionType);
@@ -699,7 +766,7 @@ const markManualOrderPaid = async (req, res, next) => {
     const orderDoc = await Order.create({
       userId: manualOrder.user_id,
       items: orderItems,
-      subtotal: Number(manualOrder.meal_cost || 0) + Number(manualOrder.addon_cost || 0),
+      subtotal: Number(manualOrder.meal_cost || 0) + Number(manualOrder.addon_cost || 0) + Number(manualOrder.byo_cost || 0),
       deliveryFee: Number(manualOrder.delivery_cost_total || 0),
       creditsApplied: 0,
       total: Number(manualOrder.grand_total || 0),

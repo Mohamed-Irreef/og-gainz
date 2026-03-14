@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Menu, X, ShoppingCart, User, LayoutDashboard, Package, Wallet, Settings, LogOut, ChevronDown } from "lucide-react";
+import { Menu, X, ShoppingCart, LayoutDashboard, Package, Wallet, Settings, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,6 +21,7 @@ const navLinks = [
   { href: "/trial", label: "Trial Packs" },
   { href: "/build-your-own", label: "Build Your Own" },
   { href: "/consultation", label: "Consultation" },
+  { href: "/blogs", label: "Blog" },
 ];
 
 const dashboardLinks = [
@@ -260,6 +261,7 @@ export function MainLayout() {
                 <li><Link to="/trial" className="hover:text-white transition-colors">Trial Packs</Link></li>
                 <li><Link to="/build-your-own" className="hover:text-white transition-colors">Build Your Own</Link></li>
                 <li><Link to="/consultation" className="hover:text-white transition-colors">Consultation</Link></li>
+                <li><Link to="/blogs" className="hover:text-white transition-colors">Blog</Link></li>
               </ul>
             </div>
 

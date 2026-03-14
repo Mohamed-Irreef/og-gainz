@@ -4,7 +4,7 @@ const ManualOrderItemSchema = new mongoose.Schema(
   {
     itemId: { type: String, required: true },
     sourceId: { type: mongoose.Schema.Types.ObjectId, required: false },
-    type: { type: String, required: true, enum: ['meal', 'addon'] },
+    type: { type: String, required: true, enum: ['meal', 'addon', 'byo'] },
     name: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
     unit_price: { type: Number, required: true, min: 0 },
@@ -51,9 +51,11 @@ const ManualOrderSchema = new mongoose.Schema(
 
     meal_items: { type: [ManualOrderItemSchema], required: true, default: [] },
     addon_items: { type: [ManualOrderItemSchema], required: true, default: [] },
+    byo_items: { type: [ManualOrderItemSchema], required: true, default: [] },
 
     meal_cost: { type: Number, required: true, min: 0 },
     addon_cost: { type: Number, required: true, min: 0 },
+    byo_cost: { type: Number, required: true, min: 0 },
     delivery_cost_total: { type: Number, required: true, min: 0 },
     grand_total: { type: Number, required: true, min: 0 },
 

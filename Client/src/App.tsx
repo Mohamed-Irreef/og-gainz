@@ -18,6 +18,8 @@ import MyOrders from "@/pages/MyOrders";
 import MyOrderDetails from "@/pages/MyOrderDetails";
 import OrderSuccess from "@/pages/OrderSuccess";
 import OrderFailed from "@/pages/OrderFailed";
+import BlogList from "@/pages/blogs";
+import BlogDetail from "@/pages/blogs/BlogDetail";
 
 import {
   Dashboard,
@@ -46,10 +48,13 @@ import {
   AdminOrderDetails,
   AdminSubscriptions,
   AdminKitchen,
-	AdminUsers,
+  AdminUsers,
   AdminUserDetails,
   AdminWallet,
   AdminSettings,
+  AdminBlogs,
+  AdminBlogForm,
+  AdminBlogView,
 } from "@/pages/admin";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -103,6 +108,8 @@ export default function App() {
         <Route path="trial" element={<TrialPacksPhase4 />} />
         <Route path="build-your-own" element={<BuildYourOwn />} />
         <Route path="consultation" element={<Consultation />} />
+        <Route path="blogs" element={<BlogList />} />
+        <Route path="blogs/:slug" element={<BlogDetail />} />
         <Route path="cart" element={<Cart />} />
         <Route path="order-details" element={<OrderDetails />} />
         <Route path="checkout" element={<Checkout />} />
@@ -333,6 +340,38 @@ export default function App() {
           handle={{
             title: 'Settings',
             description: 'Configure admin settings for operations and cutoffs.',
+          }}
+        />
+        <Route
+          path="blogs"
+          element={<AdminBlogs />}
+          handle={{
+            title: 'Blog Management',
+            description: 'Create, edit, publish, and manage blog posts.',
+          }}
+        />
+        <Route
+          path="blogs/create"
+          element={<AdminBlogForm />}
+          handle={{
+            title: 'Create Blog',
+            description: 'Write and publish a new blog post.',
+          }}
+        />
+        <Route
+          path="blogs/:id"
+          element={<AdminBlogView />}
+          handle={{
+            title: 'Blog Preview',
+            description: 'Admin preview of the blog post.',
+          }}
+        />
+        <Route
+          path="blogs/:id/edit"
+          element={<AdminBlogForm />}
+          handle={{
+            title: 'Edit Blog',
+            description: 'Edit and update a blog post.',
           }}
         />
       </Route>

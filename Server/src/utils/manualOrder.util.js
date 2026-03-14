@@ -107,13 +107,11 @@ const buildManualOrderBillHtml = ({ manualOrder, billId }) => {
 
   const mealRows = (manualOrder.meal_items || []).map((item) => {
     const plan = String(item.subscription_type || manualOrder.subscription_type || '').toUpperCase();
-    const time = item.delivery_time || manualOrder.delivery_time || '';
-    const timeLabel = time ? ` @ ${time}` : '';
     return `
       <tr>
         <td>${escapeHtml(item.name)}</td>
         <td class="center">Meal</td>
-        <td class="center">${escapeHtml(plan)}${escapeHtml(timeLabel)}</td>
+        <td class="center">${escapeHtml(plan)}</td>
         <td class="right">${Number(item.quantity || 0)}</td>
         <td class="right">${formatInr(item.line_total || 0)}</td>
       </tr>
@@ -122,13 +120,24 @@ const buildManualOrderBillHtml = ({ manualOrder, billId }) => {
 
   const addonRows = (manualOrder.addon_items || []).map((item) => {
     const plan = String(item.subscription_type || manualOrder.subscription_type || '').toUpperCase();
-    const time = item.delivery_time || manualOrder.delivery_time || '';
-    const timeLabel = time ? ` @ ${time}` : '';
     return `
       <tr>
         <td>${escapeHtml(item.name)}</td>
         <td class="center">Add-on</td>
-        <td class="center">${escapeHtml(plan)}${escapeHtml(timeLabel)}</td>
+        <td class="center">${escapeHtml(plan)}</td>
+        <td class="right">${Number(item.quantity || 0)}</td>
+        <td class="right">${formatInr(item.line_total || 0)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const byoRows = (manualOrder.byo_items || []).map((item) => {
+    const plan = String(item.subscription_type || manualOrder.subscription_type || '').toUpperCase();
+    return `
+      <tr>
+        <td>${escapeHtml(item.name)}</td>
+        <td class="center">BYO</td>
+        <td class="center">${escapeHtml(plan)}</td>
         <td class="right">${Number(item.quantity || 0)}</td>
         <td class="right">${formatInr(item.line_total || 0)}</td>
       </tr>
@@ -210,13 +219,13 @@ const buildManualOrderBillHtml = ({ manualOrder, billId }) => {
           </tr>
         </thead>
         <tbody>
-          ${mealRows}${addonRows}
         </tbody>
       </table>
 
       <div class="totals">
         <div><span>Meal cost</span><span>${formatInr(manualOrder.meal_cost || 0)}</span></div>
         <div><span>Add-on cost</span><span>${formatInr(manualOrder.addon_cost || 0)}</span></div>
+        <div><span>BYO cost</span><span>${formatInr(manualOrder.byo_cost || 0)}</span></div>
         <div><span>Total delivery fees</span><span>${formatInr(manualOrder.delivery_cost_total || 0)}</span></div>
         <div class="grand"><span>Total fees</span><span>${formatInr(manualOrder.grand_total || 0)}</span></div>
       </div>

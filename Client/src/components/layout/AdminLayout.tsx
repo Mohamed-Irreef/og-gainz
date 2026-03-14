@@ -16,7 +16,8 @@ import {
   Settings,
   Menu,
   X,
-  LogOut
+  LogOut,
+  BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/UserContext";
@@ -39,6 +40,7 @@ const adminLinks = [
   { href: "/admin/kitchen", label: "Kitchen", icon: Truck },
   { href: "/admin/wallet", label: "Wallet & Credits", icon: Wallet },
   { href: "/admin/consultations", label: "Consultations", icon: MessageSquare },
+  { href: "/admin/blogs", label: "Blog Management", icon: BookOpen },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
@@ -88,6 +90,10 @@ export function AdminLayout() {
       { path: '/admin/subscriptions', title: 'Subscriptions', description: 'Weekly/Monthly operational view. Pause/resume is admin-only.' },
       { path: '/admin/kitchen', title: 'Kitchen', description: 'Execute daily deliveries: cooking → packed → out for delivery → delivered.' },
       { path: '/admin/wallet', title: 'Wallet & Credits', description: 'Review and manage wallet balances and credits.' },
+      { path: '/admin/blogs', title: 'Blog Management', description: 'Create, edit, publish, and manage blog posts.' },
+      { path: '/admin/blogs/create', title: 'Create Blog', description: 'Write and publish a new blog post.' },
+      { path: '/admin/blogs/:id', title: 'Blog Preview', description: 'Admin preview of the blog post.' },
+      { path: '/admin/blogs/:id/edit', title: 'Edit Blog', description: 'Edit and update a blog post.' },
       { path: '/admin/settings', title: 'Settings', description: 'Configure admin settings for operations and cutoffs.' },
     ];
 

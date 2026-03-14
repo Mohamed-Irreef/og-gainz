@@ -3,7 +3,7 @@ import { apiClient, apiJson } from './apiClient';
 export type ManualOrderItem = {
   itemId: string;
   sourceId?: string;
-  type: 'meal' | 'addon';
+  type: 'meal' | 'addon' | 'byo';
   name: string;
   quantity: number;
   unit_price: number;
@@ -33,8 +33,10 @@ export type ManualOrder = {
   start_date: string;
   meal_items: ManualOrderItem[];
   addon_items: ManualOrderItem[];
+  byo_items: ManualOrderItem[];
   meal_cost: number;
   addon_cost: number;
+  byo_cost: number;
   delivery_cost_total: number;
   grand_total: number;
   payment_status: 'PENDING' | 'PAID' | 'CANCELLED';
@@ -70,6 +72,14 @@ export type ManualOrderInput = {
   }>;
   addonItems: Array<{
     addonId: string;
+    quantity: number;
+    subscriptionType: 'trial' | 'weekly' | 'monthly';
+    deliveryTime: string;
+    trialDays?: string;
+    startDate?: string;
+  }>;
+  byoItems: Array<{
+    byoId: string;
     quantity: number;
     subscriptionType: 'trial' | 'weekly' | 'monthly';
     deliveryTime: string;

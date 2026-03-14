@@ -20,8 +20,12 @@ import { API_BASE_URL } from '@/config/env';
 import { mealsCatalogService } from '@/services/mealsCatalogService';
 import { addonsCatalogService } from '@/services/addonsCatalogService';
 import { adminSettingsService } from '@/services/adminSettingsService';
+import { adminBuildYourOwnItemsService } from '@/services/adminBuildYourOwnItemsService';
+import { adminBuildYourOwnItemTypesService } from '@/services/adminBuildYourOwnItemTypesService';
+import { adminBuildYourOwnConfigService } from '@/services/adminBuildYourOwnConfigService';
 import { adminManualOrdersService, type ManualOrder } from '@/services/adminManualOrdersService';
 import type { Meal, Addon } from '@/types/catalog';
+import type { BuildYourOwnItemEntity, BuildYourOwnItemTypeEntity, BuildYourOwnConfig } from '@/types/buildYourOwn';
 import { formatCurrency } from '@/utils/formatCurrency';
 
 const DRAFT_STORAGE_KEY = 'oz-admin-manual-order-draft';
@@ -50,6 +54,13 @@ const getAddonUnitPrice = (addon: Addon, plan: 'trial' | 'weekly' | 'monthly') =
   if (plan === 'trial') return addon.pricing?.single ?? addon.price ?? 0;
   if (plan === 'weekly') return addon.pricing?.weekly ?? 0;
   if (plan === 'monthly') return addon.pricing?.monthly ?? 0;
+  return 0;
+};
+
+const getByoItemUnitPrice = (byoItem: BuildYourOwnItemEntity, plan: 'trial' | 'weekly' | 'monthly') => {
+  if (plan === 'trial') return byoItem.pricing?.single ?? 0;
+  if (plan === 'weekly') return byoItem.pricing?.weekly ?? 0;
+  if (plan === 'monthly') return byoItem.pricing?.monthly ?? 0;
   return 0;
 };
 
@@ -86,26 +97,28 @@ const buildBillText = (manualOrder: ManualOrder) => {
 
   const mealLines = (manualOrder.meal_items || []).map((item) => {
     const plan = String(item.subscription_type || manualOrder.subscription_type || '').toUpperCase();
-    const time = item.delivery_time || manualOrder.delivery_time || '';
-    const timeLabel = time ? ` @ ${time}` : '';
-    return `Meal: ${item.name} x${Number(item.quantity || 0)} (${plan}${timeLabel}) = INR ${Number(item.line_total || 0)}`;
+    return `Meal: ${item.name} x${Number(item.quantity || 0)} (${plan}) = INR ${Number(item.line_total || 0)}`;
   });
 
   const addonLines = (manualOrder.addon_items || []).map((item) => {
     const plan = String(item.subscription_type || manualOrder.subscription_type || '').toUpperCase();
-    const time = item.delivery_time || manualOrder.delivery_time || '';
-    const timeLabel = time ? ` @ ${time}` : '';
-    return `Add-on: ${item.name} x${Number(item.quantity || 0)} (${plan}${timeLabel}) = INR ${Number(item.line_total || 0)}`;
+    return `Add-on: ${item.name} x${Number(item.quantity || 0)} (${plan}) = INR ${Number(item.line_total || 0)}`;
+  });
+
+  const byoLines = (manualOrder.byo_items || []).map((item) => {
+    const plan = String(item.subscription_type || manualOrder.subscription_type || '').toUpperCase();
+    return `BYO: ${item.name} x${Number(item.quantity || 0)} (${plan}) = INR ${Number(item.line_total || 0)}`;
   });
 
   const totals = [
     `Meal cost: INR ${Number(manualOrder.meal_cost || 0)}`,
     `Add-on cost: INR ${Number(manualOrder.addon_cost || 0)}`,
+    `BYO cost: INR ${Number(manualOrder.byo_cost || 0)}`,
     `Total delivery fees: INR ${Number(manualOrder.delivery_cost_total || 0)}`,
     `Total fees: INR ${Number(manualOrder.grand_total || 0)}`,
   ];
 
-  const lines = [...headerLines, 'Items:', ...mealLines, ...addonLines, ...totals];
+  const lines = [...headerLines, 'Items:', ...mealLines, ...addonLines, ...byoLines, ...totals];
   return lines.join('\n');
 };
 
@@ -118,6 +131,14 @@ type DraftMealEntry = {
 };
 
 type DraftAddonEntry = {
+  quantity: number;
+  subscriptionType: 'trial' | 'weekly' | 'monthly';
+  deliveryTime: string;
+  trialDays: string;
+  startDate: string;
+};
+
+type DraftByoEntry = {
   quantity: number;
   subscriptionType: 'trial' | 'weekly' | 'monthly';
   deliveryTime: string;
@@ -140,6 +161,7 @@ type DraftState = {
   startDate: string;
   meals: Record<string, DraftMealEntry>;
   addons: Record<string, DraftAddonEntry | number>;
+  byoItems: Record<string, DraftByoEntry>;
 };
 
 const emptyDraft = (): DraftState => ({
@@ -157,6 +179,7 @@ const emptyDraft = (): DraftState => ({
   startDate: todayISO(),
   meals: {},
   addons: {},
+  byoItems: {},
 });
 
 export default function AdminManualOrderPage() {
@@ -167,6 +190,9 @@ export default function AdminManualOrderPage() {
 
   const [meals, setMeals] = useState<Meal[]>([]);
   const [addons, setAddons] = useState<Addon[]>([]);
+  const [byoItems, setByoItems] = useState<BuildYourOwnItemEntity[]>([]);
+  const [byoItemTypes, setByoItemTypes] = useState<BuildYourOwnItemTypeEntity[]>([]);
+  const [byoConfig, setByoConfig] = useState<BuildYourOwnConfig | null>(null);
   const [costPerKm, setCostPerKm] = useState(0);
   const [freeDeliveryRadius, setFreeDeliveryRadius] = useState(0);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
@@ -204,12 +230,18 @@ export default function AdminManualOrderPage() {
       mealsCatalogService.listMeals({ page: 1, limit: 200 }, { signal: controller.signal }),
       addonsCatalogService.listAddons({ page: 1, limit: 300 }, { signal: controller.signal }),
       adminSettingsService.getSettings({ signal: controller.signal }),
+      adminBuildYourOwnItemsService.list({ page: 1, limit: 1000, isActive: true }),
+      adminBuildYourOwnItemTypesService.list({ page: 1, limit: 50, isActive: true }),
+      adminBuildYourOwnConfigService.get(),
     ])
-      .then(([mealsRes, addonsRes, settings]) => {
+      .then(([mealsRes, addonsRes, settings, byoItemsRes, byoTypesRes, configRes]) => {
         setMeals(mealsRes.data || []);
         setAddons(addonsRes.data || []);
         setCostPerKm(settings.extraChargePerKm || 0);
         setFreeDeliveryRadius(settings.freeDeliveryRadius || 0);
+        setByoItems(byoItemsRes.data || []);
+        setByoItemTypes(byoTypesRes.data || []);
+        setByoConfig(configRes.data || null);
       })
       .catch(() => {
         toast({ title: 'Unable to load catalogs', description: 'Refresh the page to try again.', variant: 'destructive' });
@@ -273,6 +305,18 @@ export default function AdminManualOrderPage() {
     );
   };
 
+  const getByoDraft = (byoId: string): DraftByoEntry => {
+    return (
+      draft.byoItems[byoId] || {
+        quantity: 0,
+        subscriptionType: draft.subscriptionType,
+        deliveryTime: draft.deliveryTime,
+        trialDays: draft.trialDays,
+        startDate: draft.startDate,
+      }
+    );
+  };
+
   const mealSelections = useMemo(() => {
     return Object.entries(draft.meals)
       .filter(([, data]) => (data?.quantity || 0) > 0)
@@ -320,6 +364,19 @@ export default function AdminManualOrderPage() {
     }, 0);
   }, [mealSelections, meals]);
 
+  const byoSelections = useMemo(() => {
+    return Object.entries(draft.byoItems)
+      .map(([byoId, data]) => ({
+        byoId,
+        quantity: data.quantity,
+        subscriptionType: data.subscriptionType,
+        deliveryTime: data.deliveryTime,
+        trialDays: data.trialDays,
+        startDate: data.startDate,
+      }))
+      .filter((item) => item.quantity > 0);
+  }, [draft.byoItems]);
+
   const addonCost = useMemo(() => {
     return addonSelections.reduce((sum, sel) => {
       const addon = addons.find((a) => a.id === sel.addonId);
@@ -328,6 +385,15 @@ export default function AdminManualOrderPage() {
       return sum + unitPrice * sel.quantity;
     }, 0);
   }, [addonSelections, addons]);
+
+  const byoCost = useMemo(() => {
+    return byoSelections.reduce((sum, sel) => {
+      const byoItem = byoItems.find((b) => b.id === sel.byoId);
+      if (!byoItem) return sum;
+      const unitPrice = getByoItemUnitPrice(byoItem, sel.subscriptionType);
+      return sum + unitPrice * sel.quantity;
+    }, 0);
+  }, [byoSelections, byoItems]);
 
   const distanceKm = safeNumber(draft.distanceKm);
   const deliveriesPerDay = Math.max(1, Number(draft.deliveriesPerDay) || 1);
@@ -347,12 +413,18 @@ export default function AdminManualOrderPage() {
         deliveriesPerDay
       );
     }
+    if (byoSelections.length) {
+      return (
+        byoSelections.reduce((sum, sel) => sum + resolveSubscriptionDays(sel.subscriptionType, sel.trialDays), 0) *
+        deliveriesPerDay
+      );
+    }
     return 0;
-  }, [mealSelections, addonSelections, deliveriesPerDay]);
+  }, [mealSelections, addonSelections, byoSelections, deliveriesPerDay]);
 
   const dailyDeliveryCost = singleDeliveryCost * deliveriesPerDay;
   const totalDeliveryCost = singleDeliveryCost * totalDeliveries;
-  const grandTotal = mealCost + addonCost + totalDeliveryCost;
+  const grandTotal = mealCost + addonCost + byoCost + totalDeliveryCost;
 
   const payload = useMemo(
     () => ({
@@ -370,14 +442,30 @@ export default function AdminManualOrderPage() {
       startDate: draft.startDate,
       mealItems: mealSelections,
       addonItems: addonSelections,
+      byoItems: byoSelections,
     }),
-    [draft, distanceKm, deliveriesPerDay, defaultSubscriptionDays, mealSelections, addonSelections]
+    [draft, distanceKm, deliveriesPerDay, defaultSubscriptionDays, mealSelections, addonSelections, byoSelections]
   );
 
   const hasMealMissingTime = mealSelections.some((sel) => !sel.deliveryTime);
   const hasMealMissingStartDate = mealSelections.some((sel) => !sel.startDate);
   const hasAddonMissingTime = addonSelections.some((sel) => !sel.deliveryTime);
   const hasAddonMissingStartDate = addonSelections.some((sel) => !sel.startDate);
+  const hasByoMissingTime = byoSelections.some((sel) => !sel.deliveryTime);
+  const hasByoMissingStartDate = byoSelections.some((sel) => !sel.startDate);
+
+  const isByoRequirementMet = useMemo(() => {
+    if (byoSelections.length === 0) return true;
+    if (!byoConfig) return true;
+    const byoQty = byoSelections.reduce((acc, sel) => acc + sel.quantity, 0);
+    const minWeekly = byoConfig.minimumWeeklyOrderAmount || 6;
+    const minMonthly = byoConfig.minimumMonthlyOrderAmount || 26;
+    // We strictly use the draft.subscriptionType for validation matching public checkout
+    if (draft.subscriptionType === 'monthly' && byoQty < minMonthly) return false;
+    if (byoQty < minWeekly) return false;
+    return true;
+  }, [byoSelections, byoConfig, draft.subscriptionType]);
+
   const isReadyToSave =
     payload.customerName &&
     payload.phoneNumber &&
@@ -386,10 +474,17 @@ export default function AdminManualOrderPage() {
     !hasMealMissingStartDate &&
     !hasAddonMissingTime &&
     !hasAddonMissingStartDate &&
-    (payload.mealItems.length > 0 || payload.addonItems.length > 0);
+    !hasByoMissingTime &&
+    !hasByoMissingStartDate &&
+    isByoRequirementMet &&
+    (payload.mealItems.length > 0 || payload.addonItems.length > 0 || payload.byoItems.length > 0);
 
   const saveDraft = async () => {
     if (!isReadyToSave) {
+      if (!isByoRequirementMet) {
+        toast({ title: 'Minimum requirement not satisfied for BYO Menu', variant: 'destructive' });
+        return;
+      }
       toast({ title: 'Complete required fields', description: 'Add customer info, delivery time, and at least one item.' });
       return;
     }
@@ -921,6 +1016,167 @@ export default function AdminManualOrderPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-lg flex justify-between items-center">
+            <span>Build Your Own Menu</span>
+            {byoConfig ? (
+              <span className="text-xs font-normal text-muted-foreground bg-oz-neutral/20 px-2 py-1 rounded">
+                Minimum Setup: {byoConfig.minimumWeeklyOrderAmount} (Weekly) / {byoConfig.minimumMonthlyOrderAmount} (Monthly)
+              </span>
+            ) : null}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loadingCatalog ? (
+            <div className="text-sm text-muted-foreground">Loading Build Your Own Menu...</div>
+          ) : byoItemTypes.length > 0 ? (
+            <div className="space-y-6">
+              {byoItemTypes.map((type) => {
+                const typeItems = byoItems.filter((i) => i.itemTypeId === type.id);
+                if (typeItems.length === 0) return null;
+
+                return (
+                  <div key={type.id} className="space-y-3">
+                    <h3 className="font-semibold text-sm bg-oz-neutral/10 p-2 rounded">{type.name}</h3>
+                    <div className="space-y-3 pl-2">
+                      {typeItems.map((item) => {
+                        const byoDraft = getByoDraft(item.id);
+                        const selectedQty = byoDraft.quantity || 0;
+                        const unitPrice = getByoItemUnitPrice(item, byoDraft.subscriptionType);
+                        const resolvedDays = resolveSubscriptionDays(byoDraft.subscriptionType, byoDraft.trialDays);
+                        return (
+                          <div key={item.id} className="flex flex-wrap items-center gap-3 border-b border-oz-neutral/30 pb-3">
+                            <Checkbox
+                              checked={selectedQty > 0}
+                              onCheckedChange={(checked) => {
+                                setDraft((prev) => ({
+                                  ...prev,
+                                  byoItems: {
+                                    ...prev.byoItems,
+                                    [item.id]: checked
+                                      ? {
+                                          quantity: Math.max(1, selectedQty || 1),
+                                          subscriptionType: byoDraft.subscriptionType,
+                                          deliveryTime: byoDraft.deliveryTime,
+                                          trialDays: byoDraft.trialDays,
+                                          startDate: byoDraft.startDate,
+                                        }
+                                      : {
+                                          quantity: 0,
+                                          subscriptionType: byoDraft.subscriptionType,
+                                          deliveryTime: byoDraft.deliveryTime,
+                                          trialDays: byoDraft.trialDays,
+                                          startDate: byoDraft.startDate,
+                                        },
+                                  },
+                                }));
+                              }}
+                              disabled={isLocked}
+                            />
+                            <div className="flex-1">
+                              <div className="text-sm font-medium">{item.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {formatCurrency(unitPrice)} / {byoDraft.subscriptionType} · {resolvedDays} days
+                              </div>
+                            </div>
+                            <Input
+                              type="number"
+                              min={1}
+                              className="w-24"
+                              value={selectedQty || ''}
+                              onChange={(event) => {
+                                const next = Math.max(0, Number(event.target.value) || 0);
+                                setDraft((prev) => ({
+                                  ...prev,
+                                  byoItems: { ...prev.byoItems, [item.id]: { ...byoDraft, quantity: next } },
+                                }));
+                              }}
+                              disabled={isLocked}
+                            />
+                            <Select
+                              value={byoDraft.subscriptionType}
+                              onValueChange={(value) => {
+                                setDraft((prev) => ({
+                                  ...prev,
+                                  byoItems: {
+                                    ...prev.byoItems,
+                                    [item.id]: { ...byoDraft, subscriptionType: value as DraftState['subscriptionType'] },
+                                  },
+                                }));
+                              }}
+                              disabled={isLocked}
+                            >
+                              <SelectTrigger className="w-36">
+                                <SelectValue placeholder="Plan" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="trial">Trial</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              type="time"
+                              className="w-32"
+                              value={byoDraft.deliveryTime}
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                setDraft((prev) => ({
+                                  ...prev,
+                                  byoItems: { ...prev.byoItems, [item.id]: { ...byoDraft, deliveryTime: value } },
+                                }));
+                              }}
+                              disabled={isLocked}
+                            />
+                            <Input
+                              type="date"
+                              className="w-40"
+                              value={byoDraft.startDate}
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                setDraft((prev) => ({
+                                  ...prev,
+                                  byoItems: { ...prev.byoItems, [item.id]: { ...byoDraft, startDate: value } },
+                                }));
+                              }}
+                              disabled={isLocked}
+                            />
+                            {byoDraft.subscriptionType === 'trial' ? (
+                              <Select
+                                value={byoDraft.trialDays}
+                                onValueChange={(value) => {
+                                  setDraft((prev) => ({
+                                    ...prev,
+                                    byoItems: { ...prev.byoItems, [item.id]: { ...byoDraft, trialDays: value } },
+                                  }));
+                                }}
+                                disabled={isLocked}
+                              >
+                                <SelectTrigger className="w-24">
+                                  <SelectValue placeholder="Days" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="3">3d</SelectItem>
+                                  <SelectItem value="5">5d</SelectItem>
+                                  <SelectItem value="7">7d</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">No BYO menu items found.</div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-lg">Order Summary</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
@@ -931,6 +1187,10 @@ export default function AdminManualOrderPage() {
           <div className="flex items-center justify-between">
             <span>Add-on Cost</span>
             <span className="font-medium">{formatCurrency(addonCost)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>BYO Cost</span>
+            <span className="font-medium">{formatCurrency(byoCost)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span>Single Delivery Cost</span>

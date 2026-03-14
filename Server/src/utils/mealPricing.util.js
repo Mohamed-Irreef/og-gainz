@@ -28,8 +28,18 @@ const getAddonUnitPrice = ({ addon, plan }) => {
   return 0;
 };
 
+const getByoItemUnitPrice = ({ byoItem, plan }) => {
+  if (!byoItem) return 0;
+  if (plan === 'trial') return Number(byoItem.pricing?.single ?? 0);
+  if (plan === 'single') return Number(byoItem.pricing?.single ?? 0);
+  if (plan === 'weekly') return Number(byoItem.pricing?.weekly ?? 0);
+  if (plan === 'monthly') return Number(byoItem.pricing?.monthly ?? 0);
+  return 0;
+};
+
 module.exports = {
   getPricingPlanPrice,
   getMealUnitPrice,
   getAddonUnitPrice,
+  getByoItemUnitPrice,
 };
