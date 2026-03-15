@@ -1125,7 +1125,7 @@ const Index = () => {
                   Icon: Sparkles,
                   isCTA: true
                 }].map(({ title, description, Icon, isCTA }) => (
-                  <CarouselItem key={title} className="pl-2 basis-1/2">
+                  <CarouselItem key={title} className="pl-2 basis-[85%] sm:basis-1/2">
                     <Card
                       className="h-full border-2 border-oz-primary/20 bg-white shadow-md"
                       style={{ borderRadius: '12px' }}
@@ -1202,11 +1202,11 @@ const Index = () => {
 
                   <CarouselPrevious
                     aria-label="Previous featured meal"
-                    className="left-3 top-1/2 h-10 w-10 -translate-y-1/2 rounded-full border border-white/30 bg-white/70 text-oz-primary shadow-lg backdrop-blur transition-all duration-300 ease-in-out hover:scale-105 hover:bg-white/90"
+                    className="hidden md:flex left-3 top-1/2 h-10 w-10 -translate-y-1/2 rounded-full border border-white/30 bg-white/70 text-oz-primary shadow-lg backdrop-blur transition-all duration-300 ease-in-out hover:scale-105 hover:bg-white/90"
                   />
                   <CarouselNext
                     aria-label="Next featured meal"
-                    className="right-3 top-1/2 h-10 w-10 -translate-y-1/2 rounded-full border border-white/30 bg-white/70 text-oz-primary shadow-lg backdrop-blur transition-all duration-300 ease-in-out hover:scale-105 hover:bg-white/90"
+                    className="hidden md:flex right-3 top-1/2 h-10 w-10 -translate-y-1/2 rounded-full border border-white/30 bg-white/70 text-oz-primary shadow-lg backdrop-blur transition-all duration-300 ease-in-out hover:scale-105 hover:bg-white/90"
                   />
                 </Carousel>
 

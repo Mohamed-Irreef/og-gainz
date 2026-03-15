@@ -8,9 +8,21 @@ const logger = require('./utils/logger.util');
 
 const app = express();
 
+const allowedOrigins = [
+  "https://og-gainz.vercel.app",
+  "https://oggainz.com",
+  "https://www.oggainz.com"
+];
+
 // Middleware
 app.use(cors({
-  origin: ENV.CLIENT_ORIGIN,
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true
 }));
 

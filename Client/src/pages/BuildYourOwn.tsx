@@ -1015,7 +1015,7 @@ export default function BuildYourOwn() {
 																value={t.id}
 																className="relative rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-600 transition-all hover:text-oz-primary hover:bg-white/60 data-[state=active]:scale-[1.02] data-[state=active]:bg-gradient-to-br data-[state=active]:from-oz-primary data-[state=active]:to-oz-primary/90 data-[state=active]:text-white data-[state=active]:shadow-lg"
 															>
-																{t.name}
+																{t.name.replace(/Protien/g, 'Protein')}
 															</TabsTrigger>
 														))}
 														</TabsList>
@@ -1144,7 +1144,7 @@ export default function BuildYourOwn() {
 
 							{/* Right Column - Live Summary */}
 						<div className="order-2 space-y-4 xl:order-3">
-							<div className="xl:hidden">
+							<div className="hidden md:block xl:hidden">
 								<Accordion type="single" collapsible defaultValue="summary" className="w-full">
 									<AccordionItem value="summary" className="border-none">
 										<AccordionTrigger className="rounded-2xl border border-oz-neutral/40 bg-white px-4 py-3 text-left font-semibold text-oz-primary no-underline">
