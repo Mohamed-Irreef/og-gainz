@@ -1,4 +1,4 @@
-import { apiJsonNoCache } from '@/lib/apiClient';
+import { apiJsonNoCache } from './apiClient';
 
 export type DeliveryStatus = 'PENDING' | 'COOKING' | 'PACKED' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'SKIPPED';
 

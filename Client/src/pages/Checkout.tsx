@@ -1,6 +1,6 @@
 // OG GAINZ - Checkout Page (Phase 4)
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,7 +24,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useSafeBack } from '@/hooks/use-safe-back';
 import { useCart } from '@/context/CartContext';
 import { useUser } from '@/context/UserContext';
-import apiClient from '@/lib/apiClient';
 import { cartCheckoutService } from '@/services/cartCheckoutService';
 import { formatCurrency } from '@/utils/formatCurrency';
 import type { Address } from '@/types';
@@ -93,7 +92,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const handleBack = useSafeBack('/order-details');
-  const { user, isAuthenticated, isLoading, updateProfile } = useUser();
+  const { user, isAuthenticated, isLoading, updateProfile, logout } = useUser();
   const { state, quote, isQuoting, quoteError, refreshQuote, setDeliveryLocation } = useCart();
 
   const addresses = user?.addresses || [];
@@ -133,7 +132,6 @@ export default function Checkout() {
     } catch {
       return null;
     }
-    return null;
   };
 
   const coordsRoughlyMatch = (
@@ -210,17 +208,11 @@ export default function Checkout() {
   }, [addresses, selectedAddressId]);
 
   useEffect(() => {
-    if (!selectedAddress) {
-      // Clear location if no address is selected (e.g. all deleted)
-      setDeliveryLocation(undefined);
-      return;
-    }
-    
-    // Always sync the location. If coords are missing, setDeliveryLocation will handle it
-    // (though our canPay will prevent initiation).
+    if (!selectedAddress) return;
+    if (typeof selectedAddress.latitude !== 'number' || typeof selectedAddress.longitude !== 'number') return;
     setDeliveryLocation({
-      latitude: typeof selectedAddress.latitude === 'number' ? selectedAddress.latitude : undefined as any,
-      longitude: typeof selectedAddress.longitude === 'number' ? selectedAddress.longitude : undefined as any,
+      latitude: selectedAddress.latitude,
+      longitude: selectedAddress.longitude,
       address: [selectedAddress.addressLine1, selectedAddress.city, selectedAddress.pincode].filter(Boolean).join(', '),
     });
   }, [selectedAddress, setDeliveryLocation]);
@@ -448,17 +440,12 @@ export default function Checkout() {
     if (isQuoting) return false;
     if (!quote.isServiceable) return false;
     if (!selectedAddress) return false;
-    
-    // Require core fields for payment button to be active
-    const hasCoords = typeof selectedAddress.latitude === 'number' && typeof selectedAddress.longitude === 'number';
-    const hasContact = !!selectedAddress.contactNumber;
-    const hasName = !!selectedAddress.username;
-    
-    return hasCoords && hasContact && hasName;
+    return true;
   }, [quote, isQuoting, selectedAddress]);
 
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
 
-  const handlePayment = async () => {
+  const handlePay = async () => {
     if (!quote) {
       toast({ title: 'Please wait', description: 'Quoting cart…', variant: 'destructive' });
       return;
@@ -467,106 +454,121 @@ export default function Checkout() {
       toast({ title: 'Not serviceable', description: 'Delivery location is outside service area.', variant: 'destructive' });
       return;
     }
-    if (!selectedAddressId || !selectedAddress) {
+    if (!selectedAddress) {
       toast({ title: 'Address required', description: 'Please select a delivery address.', variant: 'destructive' });
       return;
     }
 
-    // Explicit validation for important fields as a fallback/user feedback
     if (!selectedAddress.username) {
-      toast({ title: 'Recipient name missing', description: 'Edit your address to add a recipient name.', variant: 'destructive' });
+      toast({ title: 'Recipient required', description: 'Please add a recipient name to the selected address.', variant: 'destructive' });
       return;
     }
+
     if (!selectedAddress.contactNumber) {
-      toast({ title: 'Contact missing', description: 'Edit your address to add a contact number.', variant: 'destructive' });
+      toast({ title: 'Contact required', description: 'Please add a contact number to the selected address.', variant: 'destructive' });
+      return;
+    }
+    if (!selectedAddress.housePlotNo || !selectedAddress.street || !selectedAddress.area || !selectedAddress.district || !selectedAddress.landmark) {
+      toast({
+        title: 'Complete your address',
+        description: 'House/Plot No, Street, Area, District, and Landmark are required.',
+        variant: 'destructive',
+      });
       return;
     }
     if (typeof selectedAddress.latitude !== 'number' || typeof selectedAddress.longitude !== 'number') {
-      toast({ title: 'Location missing', description: 'Edit your address and use "Get Current Location" to enable checkout.', variant: 'destructive' });
+      toast({
+        title: 'Coordinates required',
+        description: 'Use “Get Current Location” when adding the address so the server can compute delivery distance + fee.',
+        variant: 'destructive',
+      });
       return;
     }
 
     if (isProcessing) return;
     setIsProcessing(true);
-
     try {
-      console.log("Initiating checkout...");
-      console.log("Selected address:", selectedAddressId);
-
       // Ensure we have the latest quote before initiating payment.
       await refreshQuote();
 
-      // Phase 5: Initiate checkout via centralized cartCheckoutService
-      const data = await cartCheckoutService.initiateCheckout(state, {
-        deliveryAddressId: selectedAddressId
+      const initiate = await cartCheckoutService.initiateCheckout(state, {
+        deliveryAddress: {
+          label: selectedAddress.label,
+          username: selectedAddress.username,
+          contactNumber: selectedAddress.contactNumber,
+          housePlotNo: selectedAddress.housePlotNo,
+          street: selectedAddress.street,
+          area: selectedAddress.area,
+          district: selectedAddress.district,
+          addressLine1: selectedAddress.addressLine1,
+          addressLine2: selectedAddress.addressLine2,
+          city: selectedAddress.city,
+          state: selectedAddress.state,
+          pincode: selectedAddress.pincode,
+          landmark: selectedAddress.landmark,
+          latitude: selectedAddress.latitude,
+          longitude: selectedAddress.longitude,
+        },
       });
 
-      const order = data.order;
-      const razorpayOrder = data.razorpayOrder;
+      setActiveOrderId(initiate.order.id);
 
       await loadRazorpayScript();
       if (!window.Razorpay) throw new Error('Razorpay failed to load');
 
-      const options = {
-        key: data.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: razorpayOrder.amount,
-        currency: razorpayOrder.currency,
+      const opts = {
+        key: initiate.keyId,
+        amount: initiate.razorpayOrder.amount,
+        currency: initiate.razorpayOrder.currency,
         name: 'OG Gainz',
-        description: `Order ${order.id}`,
-        order_id: razorpayOrder.id,
+        description: `Order ${initiate.order.id}`,
+        order_id: initiate.razorpayOrder.id,
         notes: {
-          appOrderId: order.id,
+          appOrderId: initiate.order.id,
         },
         prefill: {
           email: user?.email,
           name: user?.name,
         },
         theme: { color: '#16A34A' },
-        handler: async function (paymentResponse: any) {
-          try {
-            toast({
-              title: 'Payment submitted',
-              description: 'Verifying payment status…',
-            });
-            
-            // Phase 5B: Verify payment via backend
-            await apiClient.post("/checkout/verify", paymentResponse);
-            
-            toast({
-              title: 'Payment successful!',
-              description: 'Your order has been confirmed.',
-            });
-            
-            navigate(`/order/success/${order.id}`);
-          } catch (err: any) {
-            console.error("Verification error:", err);
-            toast({
-              title: 'Verification failed',
-              description: err.message || 'Payment was successful but verification failed. Please contact support.',
-              variant: 'destructive',
-            });
-            navigate(`/order/failed/${order.id}`);
-          }
+        handler: () => {
+          // Phase 5B: never assume paid. Navigate to verification flow.
+          toast({
+            title: 'Payment submitted',
+            description: 'Verifying payment status…',
+          });
+          navigate(`/order/success/${initiate.order.id}`);
         },
         modal: {
           ondismiss: () => {
             toast({
               title: 'Payment cancelled',
-              description: `Order ${order.id} is pending payment.`,
+              description: `Order ${initiate.order.id} is pending payment.`,
               variant: 'destructive',
             });
-            navigate(`/order/failed/${order.id}`);
+            navigate(`/order/failed/${initiate.order.id}`);
           },
         },
       };
 
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
-    } catch (err: any) {
-      console.error("Checkout error:", err);
+      const rz = new window.Razorpay(opts);
+      rz.open();
+    } catch (err) {
+      const status = (err as { status?: number } | undefined)?.status;
+      if (status === 401) {
+        await logout();
+        toast({
+          title: 'Session expired',
+          description: 'Please log in again to continue checkout.',
+          variant: 'destructive',
+        });
+        navigate('/login', { replace: true, state: { from: '/checkout' } });
+        return;
+      }
+
       toast({
         title: 'Checkout failed',
-        description: err.response?.data?.message || err.message || 'Please try again',
+        description: err instanceof Error ? err.message : 'Please try again',
         variant: 'destructive',
       });
     } finally {
@@ -923,22 +925,15 @@ export default function Checkout() {
                             Get Current Location
                           </Button>
 
-                          {(() => {
-                            const lat = form.watch('latitude');
-                            const lng = form.watch('longitude');
-                            if (typeof lat === 'number' && typeof lng === 'number') {
-                              return (
-                                <div className="rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
-                                  Saved location: {lat.toFixed(6)}, {lng.toFixed(6)}
-                                </div>
-                              );
-                            }
-                            return (
-                              <div className="rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
-                                Location is required for delivery fee calculation.
-                              </div>
-                            );
-                          })()}
+                          {typeof form.watch('latitude') === 'number' && typeof form.watch('longitude') === 'number' ? (
+                            <div className="rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
+                              Saved location: {form.watch('latitude').toFixed(6)}, {form.watch('longitude').toFixed(6)}
+                            </div>
+                          ) : (
+                            <div className="rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
+                              Location is required for delivery fee calculation.
+                            </div>
+                          )}
 
                           <FormField
                             control={form.control}
@@ -992,7 +987,7 @@ export default function Checkout() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                Safe and secure payment via Razorpay. Transactions are verified and updated in real-time.
+                Razorpay order is created on the server. Phase 4 does not include webhook verification.
               </CardContent>
             </Card>
           </div>
@@ -1046,9 +1041,9 @@ export default function Checkout() {
                   </div>
 
                   <Button
-                    className="w-full bg-oz-primary hover:bg-oz-primary/90 text-white font-bold h-12 text-lg shadow-lg shadow-oz-primary/20 transition-all active:scale-[0.98]"
-                    onClick={handlePayment}
+                    onClick={handlePay}
                     disabled={!canPay || isProcessing}
+                    className="w-full mt-6 bg-oz-accent hover:bg-oz-accent/90 h-12 text-sm font-semibold md:text-base"
                   >
                     {isProcessing ? (
                       <>

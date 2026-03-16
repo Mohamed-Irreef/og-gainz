@@ -74,12 +74,16 @@ export default apiClient;
 const normalizeAxiosError = (err: unknown) => {
   if (!axios.isAxiosError(err)) return err;
 
+  const status = err.response?.status;
   const data = err.response?.data as unknown;
-  if (data && typeof data === 'object' && 'message' in data) {
-    return new Error(String((data as { message?: unknown }).message));
-  }
-  if (err.message) return new Error(err.message);
-  return new Error('Request failed');
+  const message =
+    data && typeof data === 'object' && 'message' in data
+      ? String((data as { message?: unknown }).message)
+      : err.message || 'Request failed';
+
+  const normalized = new Error(message) as Error & { status?: number };
+  if (status) normalized.status = status;
+  return normalized;
 };
 
 type ApiOptions = {
