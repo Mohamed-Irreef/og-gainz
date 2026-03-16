@@ -1,4 +1,4 @@
-import { apiJson, apiUpload } from './apiClient';
+import { apiJson, apiUpload } from '@/lib/apiClient';
 import type { PaginatedResponse, SingleResponse } from '@/types/catalog';
 
 // Define the Blog type

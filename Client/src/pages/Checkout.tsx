@@ -1,6 +1,6 @@
 // OG GAINZ - Checkout Page (Phase 4)
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -132,6 +132,7 @@ export default function Checkout() {
     } catch {
       return null;
     }
+    return null;
   };
 
   const coordsRoughlyMatch = (
@@ -443,7 +444,6 @@ export default function Checkout() {
     return true;
   }, [quote, isQuoting, selectedAddress]);
 
-  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
 
   const handlePay = async () => {
     if (!quote) {
@@ -511,7 +511,6 @@ export default function Checkout() {
         },
       });
 
-      setActiveOrderId(initiate.order.id);
 
       await loadRazorpayScript();
       if (!window.Razorpay) throw new Error('Razorpay failed to load');
@@ -913,15 +912,22 @@ export default function Checkout() {
                             Get Current Location
                           </Button>
 
-                          {typeof form.watch('latitude') === 'number' && typeof form.watch('longitude') === 'number' ? (
-                            <div className="rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
-                              Saved location: {form.watch('latitude').toFixed(6)}, {form.watch('longitude').toFixed(6)}
-                            </div>
-                          ) : (
-                            <div className="rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
-                              Location is required for delivery fee calculation.
-                            </div>
-                          )}
+                          {(() => {
+                            const lat = form.watch('latitude');
+                            const lng = form.watch('longitude');
+                            if (typeof lat === 'number' && typeof lng === 'number') {
+                              return (
+                                <div className="rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
+                                  Saved location: {lat.toFixed(6)}, {lng.toFixed(6)}
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
+                                Location is required for delivery fee calculation.
+                              </div>
+                            );
+                          })()}
 
                           <FormField
                             control={form.control}
@@ -975,7 +981,7 @@ export default function Checkout() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                Razorpay order is created on the server. Phase 4 does not include webhook verification.
+                Safe and secure payment via Razorpay. Transactions are verified and updated in real-time.
               </CardContent>
             </Card>
           </div>

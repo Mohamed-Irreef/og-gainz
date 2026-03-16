@@ -1,4 +1,4 @@
-import { apiJson, apiJsonNoCache } from './apiClient';
+import { apiJson, apiJsonNoCache } from '@/lib/apiClient';
 import type { OrderGetResponse, OrdersListResponse, PublicOrder } from '@/types/ordersPhase5b';
 
 export const ordersService = {

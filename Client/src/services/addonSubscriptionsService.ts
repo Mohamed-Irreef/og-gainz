@@ -1,5 +1,5 @@
 import { USE_MOCKS } from '@/config/env';
-import { apiJson } from './apiClient';
+import { apiJson } from '@/lib/apiClient';
 import type { AddonSubscription, Frequency } from '@/types/phase4';
 
 const STORAGE_KEY = 'oz-addon-subscriptions';

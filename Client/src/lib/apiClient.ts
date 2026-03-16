@@ -1,7 +1,7 @@
 import axios, { AxiosError, type AxiosRequestConfig, type AxiosResponse } from 'axios';
-import { API_BASE_URL } from '../config/env';
 
 const TOKEN_STORAGE_KEY = 'oz-gainz-token';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const joinUrl = (base: string, path: string) => {
   const normalizedBase = base.replace(/\/+$/, '');
@@ -26,7 +26,6 @@ const isIdempotentGet = (config: AxiosRequestConfig) => {
 const isRetryable = (err: unknown) => {
   const axiosErr = err as AxiosError | undefined;
   const status = axiosErr?.response?.status;
-  // retry on network error / 5xx / 429
   return !status || status >= 500 || status === 429;
 };
 
@@ -38,22 +37,27 @@ export const authTokenStorage = {
 };
 
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL || undefined,
-  timeout: 12_000,
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json"
+  }
 });
 
 apiClient.interceptors.request.use((config) => {
-  if (!API_BASE_URL && !config.baseURL) {
-    throw new Error('VITE_API_BASE_URL is not configured');
-  }
+  const token = localStorage.getItem("oz-gainz-token");
 
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    // User's requested pattern:
+    config.headers = {
+      ...config.headers,
+      Authorization: `Bearer ${token}`
+    } as any;
   }
 
   return config;
 });
+
+export default apiClient;
 
 const normalizeAxiosError = (err: unknown) => {
   if (!axios.isAxiosError(err)) return err;
@@ -80,7 +84,6 @@ const requestJson = async <T>(path: string, init?: RequestInit, options?: ApiOpt
     ...(init?.headers as Record<string, string> | undefined),
   };
 
-  // fetch-style body -> axios data
   let data: unknown = undefined;
   if (init?.body != null) {
     if (typeof init.body === 'string') {
@@ -99,7 +102,7 @@ const requestJson = async <T>(path: string, init?: RequestInit, options?: ApiOpt
     method,
     headers,
     data,
-    signal: init?.signal,
+    signal: init?.signal || undefined,
   };
 
   const cacheTtlMs = options?.cacheTtlMs ?? 15_000;
@@ -125,27 +128,21 @@ const requestJson = async <T>(path: string, init?: RequestInit, options?: ApiOpt
       return response.data;
     } catch (err) {
       attempt += 1;
-
-      // respect AbortController cancellation
       if (axios.isCancel(err) || (err as { name?: string } | undefined)?.name === 'CanceledError') {
         throw err;
       }
-
       if (!isIdempotentGet(config) || attempt > retries || !isRetryable(err)) {
         throw normalizeAxiosError(err);
       }
-
       await sleep(250 * attempt);
     }
   }
 };
 
 export const apiJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
-  // Default caching/retry applies to GETs only.
   return requestJson<T>(path, init, { cacheTtlMs: 15_000, retries: 2 });
 };
 
-// Use for polling/order-state sync where cached GETs would hide updates.
 export const apiJsonNoCache = async <T>(path: string, init?: RequestInit): Promise<T> => {
   return requestJson<T>(path, init, { cacheTtlMs: 0, retries: 2 });
 };

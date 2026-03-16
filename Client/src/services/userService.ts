@@ -1,6 +1,6 @@
 import type { User, Address } from '@/types';
 import { getUserById as getUser } from '@/data/users';
-import { apiJson, authTokenStorage } from './apiClient';
+import { apiJson, authTokenStorage } from '@/lib/apiClient';
 
 type AuthUserPayload = {
   id: string;

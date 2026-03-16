@@ -1,4 +1,4 @@
-import { apiJson } from './apiClient';
+import { apiJson } from '@/lib/apiClient';
 import type { CartQuote, CartState } from '@/types/cartPhase4';
 
 type QuoteResponse = {

@@ -1,5 +1,5 @@
 import { USE_MOCKS } from '@/config/env';
-import { apiJson } from './apiClient';
+import { apiJson } from '@/lib/apiClient';
 import { customMealComponents } from '@/data/customMealComponents';
 import type { CustomMealComponent } from '@/types/phase4';
 

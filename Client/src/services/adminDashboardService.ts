@@ -1,4 +1,4 @@
-import { apiJsonNoCache } from './apiClient';
+import { apiJsonNoCache } from '@/lib/apiClient';
 
 type AdminDashboardResponse = {
 	stats: {

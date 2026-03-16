@@ -1,5 +1,5 @@
 import { USE_MOCKS } from '@/config/env';
-import { apiJson } from './apiClient';
+import { apiJson } from '@/lib/apiClient';
 import type { Meal, PaginatedResponse, SingleResponse } from '@/types/catalog';
 import { mealPacks } from '@/data/mealPacks';
 

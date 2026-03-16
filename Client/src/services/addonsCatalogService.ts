@@ -1,5 +1,5 @@
 import { USE_MOCKS } from '@/config/env';
-import { apiJson } from './apiClient';
+import { apiJson } from '@/lib/apiClient';
 import type { Addon, AddonCategory, PaginatedResponse } from '@/types/catalog';
 import { addOns } from '@/data/addOns';
 

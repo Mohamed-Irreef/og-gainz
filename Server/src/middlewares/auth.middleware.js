@@ -13,14 +13,16 @@ const getBearerToken = (req) => {
 
 module.exports = async (req, res, next) => {
   try {
-    const token = getBearerToken(req);
+    const authHeader = req.headers.authorization;
 
-    if (!token) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         status: 'error',
         message: 'Authentication required',
       });
     }
+
+    const token = authHeader.split(" ")[1];
 
     const payload = jwt.verify(token, ENV.JWT_SECRET);
 

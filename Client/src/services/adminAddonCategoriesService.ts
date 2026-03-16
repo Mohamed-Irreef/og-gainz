@@ -1,4 +1,4 @@
-import { apiJson } from './apiClient';
+import { apiJson } from '@/lib/apiClient';
 import type { AddonCategoryEntity, PaginatedResponse, SingleResponse } from '@/types/catalog';
 
 type ApiAddonCategory = Omit<AddonCategoryEntity, 'id'> & { _id?: string };

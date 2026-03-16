@@ -1,4 +1,4 @@
-import { apiJson, apiJsonNoCache } from './apiClient';
+import { apiJson, apiJsonNoCache } from '@/lib/apiClient';
 import type { PauseSkipRequest } from '@/types';
 
 type ListResponse = {

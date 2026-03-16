@@ -1,4 +1,4 @@
-import { apiJson } from './apiClient';
+import { apiJson } from '@/lib/apiClient';
 import type { PaginatedResponse, SingleResponse, IncludedItemEntity } from '@/types/catalog';
 
 type ApiIncludedItem = Omit<IncludedItemEntity, 'id'> & { _id?: string };

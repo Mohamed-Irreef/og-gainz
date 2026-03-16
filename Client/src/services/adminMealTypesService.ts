@@ -1,4 +1,4 @@
-import { apiJson } from './apiClient';
+import { apiJson } from '@/lib/apiClient';
 import type { PaginatedResponse, SingleResponse, MealTypeEntity } from '@/types/catalog';
 
 type ApiMealType = Omit<MealTypeEntity, 'id'> & { _id?: string };

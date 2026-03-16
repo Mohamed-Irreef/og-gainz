@@ -1,4 +1,4 @@
-import { apiJson, apiUpload } from './apiClient';
+import { apiJson, apiUpload } from '@/lib/apiClient';
 import type { Addon, AddonCategory, PaginatedResponse, SingleResponse } from '@/types/catalog';
 
 type AdminAddon = Addon & {

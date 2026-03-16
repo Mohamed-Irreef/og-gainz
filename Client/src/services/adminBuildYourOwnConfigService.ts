@@ -1,4 +1,4 @@
-import { apiJson } from './apiClient';
+import { apiJson } from '@/lib/apiClient';
 import type { BuildYourOwnConfig } from '@/types/buildYourOwn';
 
 export const adminBuildYourOwnConfigService = {

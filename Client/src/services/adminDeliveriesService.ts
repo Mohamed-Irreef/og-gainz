@@ -1,4 +1,4 @@
-import { apiJson } from './apiClient';
+import { apiJson } from '@/lib/apiClient';
 
 export type AdminDeliveryStatus = 'PENDING' | 'COOKING' | 'PACKED' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'SKIPPED';
 export type AdminDeliveryChangedBy = 'SYSTEM' | 'ADMIN' | 'KITCHEN';

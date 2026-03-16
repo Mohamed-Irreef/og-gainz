@@ -1,4 +1,4 @@
-import { apiClient, apiJson } from './apiClient';
+import { apiClient, apiJson } from '@/lib/apiClient';
 
 export type ManualOrderItem = {
   itemId: string;

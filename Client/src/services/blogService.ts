@@ -1,4 +1,4 @@
-import { apiJson } from './apiClient';
+import { apiJson } from '@/lib/apiClient';
 import type { PaginatedResponse, SingleResponse } from '@/types/catalog';
 import type { Blog } from './adminBlogService';
 

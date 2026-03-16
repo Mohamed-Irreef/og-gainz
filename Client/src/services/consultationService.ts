@@ -1,5 +1,5 @@
 import type { ConsultationLead } from '@/types';
-import { apiJson, apiJsonNoCache } from './apiClient';
+import { apiJson, apiJsonNoCache } from '@/lib/apiClient';
 
 type ApiSuccess<T> = { status: 'success'; data: T; message?: string };
 type ApiError = { status: 'error'; message?: string };

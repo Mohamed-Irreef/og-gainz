@@ -1,4 +1,4 @@
-import { apiJson, apiUpload } from './apiClient';
+import { apiJson, apiUpload } from '@/lib/apiClient';
 import type { BuildYourOwnItemEntity } from '@/types/buildYourOwn';
 
 export const adminBuildYourOwnItemsService = {
