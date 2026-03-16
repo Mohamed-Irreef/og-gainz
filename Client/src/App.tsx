@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { MainLayout, DashboardLayout, AdminLayout } from "@/components/layout";
 import { useUser } from "@/context/UserContext";
@@ -98,6 +99,17 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Standardize domain: redirect oggainz.com to www.oggainz.com in production.
+    if (
+      window.location.hostname === 'oggainz.com' &&
+      !window.location.hostname.includes('localhost') &&
+      !window.location.hostname.includes('127.0.0.1')
+    ) {
+      window.location.replace(`https://www.oggainz.com${window.location.pathname}${window.location.search}`);
+    }
+  }, []);
+
   return (
     <Routes>
       <Route path="/" element={<MainLayout />}>

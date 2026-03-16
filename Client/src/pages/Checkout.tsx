@@ -25,6 +25,7 @@ import { useSafeBack } from '@/hooks/use-safe-back';
 import { useCart } from '@/context/CartContext';
 import { useUser } from '@/context/UserContext';
 import apiClient from '@/lib/apiClient';
+import { cartCheckoutService } from '@/services/cartCheckoutService';
 import { formatCurrency } from '@/utils/formatCurrency';
 import type { Address } from '@/types';
 
@@ -495,18 +496,10 @@ export default function Checkout() {
       // Ensure we have the latest quote before initiating payment.
       await refreshQuote();
 
-      // Phase 5: Initiate checkout via centralized apiClient
-      const response = await apiClient.post("/checkout/initiate", {
-        addressId: selectedAddressId,
-        items: state.items,
-        creditsToApply: state.creditsToApply,
-        orderDetailsByItemId: state.orderDetailsByItemId
+      // Phase 5: Initiate checkout via centralized cartCheckoutService
+      const data = await cartCheckoutService.initiateCheckout(state, {
+        deliveryAddressId: selectedAddressId
       });
-
-      const data = response.data;
-      if (data.status !== 'success') {
-        throw new Error(data.message || 'Failed to initiate checkout');
-      }
 
       const order = data.order;
       const razorpayOrder = data.razorpayOrder;

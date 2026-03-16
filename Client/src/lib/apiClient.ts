@@ -47,10 +47,21 @@ apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("oz-gainz-token");
 
   if (token) {
-    // Explicitly set the header as requested by user
     if (config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // Robust header setting for various Axios versions
+      if (typeof (config.headers as any).set === 'function') {
+        (config.headers as any).set('Authorization', `Bearer ${token}`);
+      } else {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
+  }
+
+  // Debug log for troubleshooting 401s in production
+  if (import.meta.env.MODE === 'development' || window.location.hostname === 'oggainz.com' || window.location.hostname === 'www.oggainz.com') {
+    console.log(`[apiClient] ${String(config.method).toUpperCase()} ${config.url}`, {
+      hasAuth: !!(config.headers as any)?.Authorization || !!(config.headers as any)?.authorization
+    });
   }
 
   return config;
