@@ -100,12 +100,14 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   useEffect(() => {
+    console.log("[App] Hostname:", window.location.hostname);
     // Standardize domain: redirect oggainz.com to www.oggainz.com in production.
     if (
       window.location.hostname === 'oggainz.com' &&
       !window.location.hostname.includes('localhost') &&
       !window.location.hostname.includes('127.0.0.1')
     ) {
+      console.log("[App] Redirecting to www...");
       window.location.replace(`https://www.oggainz.com${window.location.pathname}${window.location.search}`);
     }
   }, []);

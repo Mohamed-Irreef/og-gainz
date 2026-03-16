@@ -181,6 +181,8 @@ const mapQuotedItemsToOrderItems = (quotedItems, requestItems, orderDetailsByIte
 const initiateCheckout = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    console.log(`[checkout.initiate] userId: ${userId}`);
+    console.log(`[checkout.initiate] body: ${JSON.stringify(req.body)}`);
     if (!userId) return res.status(401).json({ status: 'error', message: 'Unauthorized' });
 
     const razorpayKeyId = process.env.RAZORPAY_KEY_ID;

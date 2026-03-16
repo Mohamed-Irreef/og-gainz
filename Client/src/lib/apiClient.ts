@@ -59,8 +59,10 @@ apiClient.interceptors.request.use((config) => {
 
   // Debug log for troubleshooting 401s in production
   if (import.meta.env.MODE === 'development' || window.location.hostname === 'oggainz.com' || window.location.hostname === 'www.oggainz.com') {
+    const authHeader = (config.headers as any)?.Authorization || (config.headers as any)?.authorization;
     console.log(`[apiClient] ${String(config.method).toUpperCase()} ${config.url}`, {
-      hasAuth: !!(config.headers as any)?.Authorization || !!(config.headers as any)?.authorization
+      hasAuth: !!authHeader,
+      authHeaderValue: authHeader ? `${authHeader.substring(0, 20)}...` : 'NONE'
     });
   }
 

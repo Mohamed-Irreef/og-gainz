@@ -16,6 +16,7 @@ module.exports = async (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log(`[auth] Missing or invalid header: ${authHeader}`);
       return res.status(401).json({
         status: 'error',
         message: 'Authentication required',
@@ -23,6 +24,7 @@ module.exports = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
+    console.log(`[auth] Token present: ${token.substring(0, 10)}...`);
 
     const payload = jwt.verify(token, ENV.JWT_SECRET);
 
