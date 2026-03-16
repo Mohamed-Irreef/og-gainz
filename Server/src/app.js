@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const cookieParser = require('cookie-parser');
 const { ENV } = require('./config/env.config');
 const routes = require('./routes/index.routes');
 const adminSettingsRoutes = require('./routes/admin.settings.routes');
@@ -17,7 +16,6 @@ const allowedOrigins = [
 ];
 
 // Middleware
-app.use(cookieParser());
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -25,8 +23,7 @@ app.use(cors({
     } else {
       callback(new Error("Not allowed by CORS"));
     }
-  },
-  credentials: true
+  }
 }));
 
 // Capture raw body for Razorpay webhook signature verification.

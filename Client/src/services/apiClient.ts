@@ -40,7 +40,6 @@ export const authTokenStorage = {
 export const apiClient = axios.create({
   baseURL: API_BASE_URL || undefined,
   timeout: 12_000,
-  withCredentials: true,
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -48,11 +47,10 @@ apiClient.interceptors.request.use((config) => {
     throw new Error('VITE_API_BASE_URL is not configured');
   }
 
-  const token = authTokenStorage.get();
-  config.headers = {
-    ...(config.headers || {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
 
   return config;
 });
