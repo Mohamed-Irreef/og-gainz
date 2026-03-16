@@ -472,9 +472,9 @@ export default function Checkout() {
       // Phase 5: Initiate checkout via centralized apiClient
       const response = await apiClient.post("/checkout/initiate", {
         addressId: selectedAddressId,
-        // We still send everything else from context for safer server-side computation
         items: state.items,
-        creditsToApply: state.creditsToApply
+        creditsToApply: state.creditsToApply,
+        orderDetailsByItemId: state.orderDetailsByItemId
       });
 
       const data = response.data;
