@@ -70,6 +70,13 @@ const login = async (req, res, next) => {
 
     const token = issueToken(user);
 
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
     return res.status(200).json({
       status: 'success',
       token,
@@ -122,6 +129,13 @@ const google = async (req, res, next) => {
     );
 
     const token = issueToken(user);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
 
     return res.status(200).json({
       status: 'success',

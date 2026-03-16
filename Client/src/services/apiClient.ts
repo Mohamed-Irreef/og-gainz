@@ -40,6 +40,7 @@ export const authTokenStorage = {
 export const apiClient = axios.create({
   baseURL: API_BASE_URL || undefined,
   timeout: 12_000,
+  withCredentials: true,
 });
 
 apiClient.interceptors.request.use((config) => {

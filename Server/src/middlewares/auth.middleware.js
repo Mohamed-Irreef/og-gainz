@@ -13,12 +13,12 @@ const getBearerToken = (req) => {
 
 module.exports = async (req, res, next) => {
   try {
-    const token = getBearerToken(req);
+    const token = getBearerToken(req) || req.cookies?.token;
 
     if (!token) {
       return res.status(401).json({
         status: 'error',
-        message: 'Authentication required',
+        message: 'Unauthorized',
       });
     }
 
