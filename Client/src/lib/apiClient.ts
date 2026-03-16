@@ -47,11 +47,10 @@ apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("oz-gainz-token");
 
   if (token) {
-    // User's requested pattern:
-    config.headers = {
-      ...config.headers,
-      Authorization: `Bearer ${token}`
-    } as any;
+    // Explicitly set the header as requested by user
+    if (config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
 
   return config;

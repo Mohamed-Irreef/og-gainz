@@ -8,5 +8,10 @@ const router = express.Router();
 
 router.post('/initiate', auth, ensureNotBlocked, initiateCheckout);
 router.post('/retry', auth, ensureNotBlocked, retryCheckout);
+router.post('/verify', auth, ensureNotBlocked, (req, res, next) => {
+  // We will implement verifyCheckout in controller
+  const { verifyCheckout } = require('../controllers/checkout.controller');
+  return verifyCheckout(req, res, next);
+});
 
 module.exports = router;

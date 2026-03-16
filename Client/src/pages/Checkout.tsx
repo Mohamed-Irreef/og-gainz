@@ -24,7 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSafeBack } from '@/hooks/use-safe-back';
 import { useCart } from '@/context/CartContext';
 import { useUser } from '@/context/UserContext';
-import { cartCheckoutService } from '@/services/cartCheckoutService';
+import apiClient from '@/lib/apiClient';
 import { formatCurrency } from '@/utils/formatCurrency';
 import type { Address } from '@/types';
 
@@ -445,7 +445,7 @@ export default function Checkout() {
   }, [quote, isQuoting, selectedAddress]);
 
 
-  const handlePay = async () => {
+  const handlePayment = async () => {
     if (!quote) {
       toast({ title: 'Please wait', description: 'Quoting cart…', variant: 'destructive' });
       return;
@@ -454,108 +454,100 @@ export default function Checkout() {
       toast({ title: 'Not serviceable', description: 'Delivery location is outside service area.', variant: 'destructive' });
       return;
     }
-    if (!selectedAddress) {
+    if (!selectedAddressId) {
       toast({ title: 'Address required', description: 'Please select a delivery address.', variant: 'destructive' });
-      return;
-    }
-
-    if (!selectedAddress.username) {
-      toast({ title: 'Recipient required', description: 'Please add a recipient name to the selected address.', variant: 'destructive' });
-      return;
-    }
-
-    if (!selectedAddress.contactNumber) {
-      toast({ title: 'Contact required', description: 'Please add a contact number to the selected address.', variant: 'destructive' });
-      return;
-    }
-    if (!selectedAddress.housePlotNo || !selectedAddress.street || !selectedAddress.area || !selectedAddress.district || !selectedAddress.landmark) {
-      toast({
-        title: 'Complete your address',
-        description: 'House/Plot No, Street, Area, District, and Landmark are required.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (typeof selectedAddress.latitude !== 'number' || typeof selectedAddress.longitude !== 'number') {
-      toast({
-        title: 'Coordinates required',
-        description: 'Use “Get Current Location” when adding the address so the server can compute delivery distance + fee.',
-        variant: 'destructive',
-      });
       return;
     }
 
     if (isProcessing) return;
     setIsProcessing(true);
+
     try {
+      console.log("Initiating checkout...");
+      console.log("Selected address:", selectedAddressId);
+
       // Ensure we have the latest quote before initiating payment.
       await refreshQuote();
 
-      const initiate = await cartCheckoutService.initiateCheckout(state, {
-        deliveryAddress: {
-          label: selectedAddress.label,
-          username: selectedAddress.username,
-          contactNumber: selectedAddress.contactNumber,
-          housePlotNo: selectedAddress.housePlotNo,
-          street: selectedAddress.street,
-          area: selectedAddress.area,
-          district: selectedAddress.district,
-          addressLine1: selectedAddress.addressLine1,
-          addressLine2: selectedAddress.addressLine2,
-          city: selectedAddress.city,
-          state: selectedAddress.state,
-          pincode: selectedAddress.pincode,
-          landmark: selectedAddress.landmark,
-          latitude: selectedAddress.latitude,
-          longitude: selectedAddress.longitude,
-        },
+      // Phase 5: Initiate checkout via centralized apiClient
+      const response = await apiClient.post("/checkout/initiate", {
+        addressId: selectedAddressId,
+        // We still send everything else from context for safer server-side computation
+        items: state.items,
+        creditsToApply: state.creditsToApply
       });
 
+      const data = response.data;
+      if (data.status !== 'success') {
+        throw new Error(data.message || 'Failed to initiate checkout');
+      }
+
+      const order = data.order;
+      const razorpayOrder = data.razorpayOrder;
 
       await loadRazorpayScript();
       if (!window.Razorpay) throw new Error('Razorpay failed to load');
 
-      const opts = {
-        key: initiate.keyId,
-        amount: initiate.razorpayOrder.amount,
-        currency: initiate.razorpayOrder.currency,
+      const options = {
+        key: data.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
         name: 'OG Gainz',
-        description: `Order ${initiate.order.id}`,
-        order_id: initiate.razorpayOrder.id,
+        description: `Order ${order.id}`,
+        order_id: razorpayOrder.id,
         notes: {
-          appOrderId: initiate.order.id,
+          appOrderId: order.id,
         },
         prefill: {
           email: user?.email,
           name: user?.name,
         },
         theme: { color: '#16A34A' },
-        handler: () => {
-          // Phase 5B: never assume paid. Navigate to verification flow.
-          toast({
-            title: 'Payment submitted',
-            description: 'Verifying payment status…',
-          });
-          navigate(`/order/success/${initiate.order.id}`);
+        handler: async function (paymentResponse: any) {
+          try {
+            toast({
+              title: 'Payment submitted',
+              description: 'Verifying payment status…',
+            });
+            
+            // Phase 5B: Verify payment via backend
+            await apiClient.post("/checkout/verify", paymentResponse);
+            
+            toast({
+              title: 'Payment successful!',
+              description: 'Your order has been confirmed.',
+            });
+            
+            navigate(`/order/success/${order.id}`);
+          } catch (err: any) {
+            console.error("Verification error:", err);
+            toast({
+              title: 'Verification failed',
+              description: err.message || 'Payment was successful but verification failed. Please contact support.',
+              variant: 'destructive',
+            });
+            navigate(`/order/failed/${order.id}`);
+          }
         },
         modal: {
           ondismiss: () => {
             toast({
               title: 'Payment cancelled',
-              description: `Order ${initiate.order.id} is pending payment.`,
+              description: `Order ${order.id} is pending payment.`,
               variant: 'destructive',
             });
-            navigate(`/order/failed/${initiate.order.id}`);
+            navigate(`/order/failed/${order.id}`);
           },
         },
       };
 
-      const rz = new window.Razorpay(opts);
-      rz.open();
-    } catch (err) {
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      console.error("Checkout error:", err);
       toast({
         title: 'Checkout failed',
-        description: err instanceof Error ? err.message : 'Please try again',
+        description: err.response?.data?.message || err.message || 'Please try again',
         variant: 'destructive',
       });
     } finally {
@@ -1035,9 +1027,9 @@ export default function Checkout() {
                   </div>
 
                   <Button
-                    onClick={handlePay}
+                    className="w-full bg-oz-primary hover:bg-oz-primary/90 text-white font-bold h-12 text-lg shadow-lg shadow-oz-primary/20 transition-all active:scale-[0.98]"
+                    onClick={handlePayment}
                     disabled={!canPay || isProcessing}
-                    className="w-full mt-6 bg-oz-accent hover:bg-oz-accent/90 h-12 text-sm font-semibold md:text-base"
                   >
                     {isProcessing ? (
                       <>

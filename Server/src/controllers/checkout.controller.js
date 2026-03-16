@@ -1,4 +1,5 @@
 const Razorpay = require('razorpay');
+const crypto = require('crypto');
 
 const Order = require('../models/Order.model');
 const User = require('../models/User.model');
@@ -182,7 +183,7 @@ const initiateCheckout = async (req, res, next) => {
 
     const deliveryAddress = await resolveDeliveryAddress({
       userId,
-      deliveryAddressId: req.body?.deliveryAddressId,
+      deliveryAddressId: req.body?.deliveryAddressId || req.body?.addressId,
       deliveryAddress: req.body?.deliveryAddress,
     });
 
@@ -248,23 +249,21 @@ const initiateCheckout = async (req, res, next) => {
 
     return res.json({
       status: 'success',
-      data: {
-        keyId: razorpayKeyId,
-        razorpayOrder: {
-          id: rpOrder.id,
-          amount: rpOrder.amount,
-          currency: rpOrder.currency,
-          receipt: rpOrder.receipt,
-        },
-        order: {
-          id: String(orderDoc._id),
-          subtotal: quote.subtotal,
-          deliveryFee: quote.deliveryFee,
-          creditsApplied: quote.creditsApplied,
-          total: quote.total,
-          deliveryDistanceKm: quote.distanceKm,
-          items: quote.items,
-        },
+      keyId: razorpayKeyId,
+      razorpayOrder: {
+        id: rpOrder.id,
+        amount: rpOrder.amount,
+        currency: rpOrder.currency,
+        receipt: rpOrder.receipt,
+      },
+      order: {
+        id: String(orderDoc._id),
+        subtotal: quote.subtotal,
+        deliveryFee: quote.deliveryFee,
+        creditsApplied: quote.creditsApplied,
+        total: quote.total,
+        deliveryDistanceKm: quote.distanceKm,
+        items: quote.items,
       },
     });
   } catch (err) {
@@ -368,7 +367,58 @@ const retryCheckout = async (req, res, next) => {
   }
 };
 
+const verifyCheckout = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body ?? {};
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ status: 'error', message: 'Missing payment details' });
+    }
+
+    const secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!secret) return res.status(500).json({ status: 'error', message: 'Razorpay secret not configured' });
+
+    const generated = crypto
+      .createHmac('sha256', secret)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (generated !== razorpay_signature) {
+      return res.status(400).json({ status: 'error', message: 'Invalid payment signature' });
+    }
+
+    // Mark order as PAID
+    const order = await Order.findOneAndUpdate(
+      { razorpayOrderId: razorpay_order_id, userId },
+      {
+        $set: {
+          paymentStatus: 'PAID',
+          status: 'PAID',
+          'payment.paymentId': razorpay_payment_id,
+          'payment.signature': razorpay_signature,
+          'payment.status': 'PAID',
+          'payment.paidAt': new Date(),
+        },
+        $push: {
+          statusHistory: { status: 'PAID', changedAt: new Date(), changedBy: 'SYSTEM' },
+        },
+      },
+      { new: true }
+    );
+
+    if (!order) return res.status(404).json({ status: 'error', message: 'Order not found' });
+
+    return res.json({ status: 'success', message: 'Payment verified', data: { orderId: order._id } });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   initiateCheckout,
   retryCheckout,
+  verifyCheckout,
 };
