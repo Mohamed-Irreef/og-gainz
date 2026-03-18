@@ -394,7 +394,9 @@ const createManualOrder = async (req, res, next) => {
     });
     const totalDeliveryFee = calculateDeliveryFee(deliveryFeeSubscriptions, singleDeliveryCost);
 
-    const grandTotal = mealCost + addonCost + byoCost + totalDeliveryFee;
+    const grossTotal = mealCost + addonCost + byoCost + totalDeliveryFee;
+    const discountAmount = Math.max(0, Math.min(grossTotal, toNumber(req.body?.discountAmount, 0)));
+    const grandTotal = Math.max(0, grossTotal - discountAmount);
 
     const user = await findOrCreateUser({ customerName, phoneNumber, address });
 
@@ -422,6 +424,7 @@ const createManualOrder = async (req, res, next) => {
       addon_cost: addonCost,
       byo_cost: byoCost,
       delivery_cost_total: totalDeliveryFee,
+      discount_amount: discountAmount,
       grand_total: grandTotal,
       payment_status: 'PENDING',
       order_status: 'PENDING_PAYMENT',
@@ -528,7 +531,9 @@ const updateManualOrder = async (req, res, next) => {
     });
     const totalDeliveryFee = calculateDeliveryFee(deliveryFeeSubscriptions, singleDeliveryCost);
 
-    const grandTotal = mealCost + addonCost + byoCost + totalDeliveryFee;
+    const grossTotal = mealCost + addonCost + byoCost + totalDeliveryFee;
+    const discountAmount = Math.max(0, Math.min(grossTotal, toNumber(req.body?.discountAmount, manualOrder.discount_amount || 0)));
+    const grandTotal = Math.max(0, grossTotal - discountAmount);
 
     const updates = {
       customer_name: customerName,
@@ -551,6 +556,7 @@ const updateManualOrder = async (req, res, next) => {
       addon_cost: addonCost,
       byo_cost: byoCost,
       delivery_cost_total: totalDeliveryFee,
+      discount_amount: discountAmount,
       grand_total: grandTotal,
     };
 

@@ -104,6 +104,15 @@ const buildManualOrderBillHtml = ({ manualOrder, billId }) => {
   const paymentStatus = String(manualOrder.payment_status || '').toUpperCase() || 'PENDING';
   const createdAt = manualOrder.created_at || manualOrder.createdAt || new Date();
   const createdDate = toISODate(createdAt) || toISODate(new Date());
+  const subtotalBeforeDiscount =
+    Number(manualOrder.meal_cost || 0) +
+    Number(manualOrder.addon_cost || 0) +
+    Number(manualOrder.byo_cost || 0) +
+    Number(manualOrder.delivery_cost_total || 0);
+  const discountAmount = Math.max(0, Number(manualOrder.discount_amount || 0));
+  const discountPctRaw = subtotalBeforeDiscount > 0 ? (discountAmount / subtotalBeforeDiscount) * 100 : 0;
+  const discountPct = Math.max(0, Math.min(100, discountPctRaw));
+  const discountPctText = Number.isInteger(discountPct) ? String(discountPct) : discountPct.toFixed(2);
 
   const mealRows = (manualOrder.meal_items || []).map((item) => {
     const plan = String(item.subscription_type || manualOrder.subscription_type || '').toUpperCase();
@@ -227,6 +236,7 @@ const buildManualOrderBillHtml = ({ manualOrder, billId }) => {
         <div><span>Add-on cost</span><span>${formatInr(manualOrder.addon_cost || 0)}</span></div>
         <div><span>BYO cost</span><span>${formatInr(manualOrder.byo_cost || 0)}</span></div>
         <div><span>Total delivery fees</span><span>${formatInr(manualOrder.delivery_cost_total || 0)}</span></div>
+        <div><span>Discount (${discountPctText}%)</span><span>- ${formatInr(discountAmount)}</span></div>
         <div class="grand"><span>Total fees</span><span>${formatInr(manualOrder.grand_total || 0)}</span></div>
       </div>
 

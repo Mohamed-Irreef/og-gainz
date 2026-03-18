@@ -57,6 +57,7 @@ const ManualOrderSchema = new mongoose.Schema(
     addon_cost: { type: Number, required: true, min: 0 },
     byo_cost: { type: Number, required: true, min: 0 },
     delivery_cost_total: { type: Number, required: true, min: 0 },
+    discount_amount: { type: Number, required: true, min: 0, default: 0 },
     grand_total: { type: Number, required: true, min: 0 },
 
     payment_status: { type: String, required: true, enum: ['PENDING', 'PAID', 'CANCELLED'], default: 'PENDING' },
