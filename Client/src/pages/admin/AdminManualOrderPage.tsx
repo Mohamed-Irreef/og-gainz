@@ -16,7 +16,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AdminFormLayout, ADMIN_FORM_CONTAINER, ADMIN_FORM_GRID, FormField } from '@/components/admin';
 import { useToast } from '@/hooks/use-toast';
-import { API_BASE_URL } from '@/config/env';
 import { mealsCatalogService } from '@/services/mealsCatalogService';
 import { addonsCatalogService } from '@/services/addonsCatalogService';
 import { adminSettingsService } from '@/services/adminSettingsService';
@@ -71,18 +70,6 @@ const resolveSubscriptionDays = (subscriptionType: 'trial' | 'weekly' | 'monthly
   return [3, 5, 7].includes(trial) ? trial : 3;
 };
 
-const resolveBillLink = (path: string) => {
-  if (!path) return '';
-  if (/^https?:/i.test(path)) return path;
-  const base = API_BASE_URL || window.location.origin;
-  const trimmedBase = base.replace(/\/+$/, '');
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  if (trimmedBase.endsWith('/api') && normalizedPath.startsWith('/api/')) {
-    return `${trimmedBase}${normalizedPath.slice(4)}`;
-  }
-  return `${trimmedBase}${normalizedPath}`;
-};
-
 const buildBillText = (manualOrder: ManualOrder) => {
   const headerLines = [
     'OG GAINZ MANUAL ORDER',
@@ -115,6 +102,7 @@ const buildBillText = (manualOrder: ManualOrder) => {
     `Add-on cost: INR ${Number(manualOrder.addon_cost || 0)}`,
     `BYO cost: INR ${Number(manualOrder.byo_cost || 0)}`,
     `Total delivery fees: INR ${Number(manualOrder.delivery_cost_total || 0)}`,
+    `Discount: INR ${Number(manualOrder.discount_amount || 0)}`,
     `Total fees: INR ${Number(manualOrder.grand_total || 0)}`,
   ];
 
@@ -158,6 +146,8 @@ type DraftState = {
   deliveriesPerDay: string;
   subscriptionType: 'trial' | 'weekly' | 'monthly';
   trialDays: string;
+  discountValue: string;
+  appliedDiscount: number;
   startDate: string;
   meals: Record<string, DraftMealEntry>;
   addons: Record<string, DraftAddonEntry | number>;
@@ -176,6 +166,8 @@ const emptyDraft = (): DraftState => ({
   deliveriesPerDay: '1',
   subscriptionType: 'weekly',
   trialDays: '3',
+  discountValue: '',
+  appliedDiscount: 0,
   startDate: todayISO(),
   meals: {},
   addons: {},
@@ -424,7 +416,16 @@ export default function AdminManualOrderPage() {
 
   const dailyDeliveryCost = singleDeliveryCost * deliveriesPerDay;
   const totalDeliveryCost = singleDeliveryCost * totalDeliveries;
-  const grandTotal = mealCost + addonCost + byoCost + totalDeliveryCost;
+  const grossTotal = mealCost + addonCost + byoCost + totalDeliveryCost;
+  const appliedDiscount = Math.max(0, Math.min(grossTotal, Number(draft.appliedDiscount) || 0));
+  const discountDraftValue = Math.max(0, Number(draft.discountValue) || 0);
+  const discountPreview = Math.min(grossTotal, discountDraftValue);
+  const grandTotal = Math.max(0, grossTotal - appliedDiscount);
+
+  useEffect(() => {
+    if (appliedDiscount === draft.appliedDiscount) return;
+    setDraft((prev) => ({ ...prev, appliedDiscount }));
+  }, [appliedDiscount, draft.appliedDiscount]);
 
   const payload = useMemo(
     () => ({
@@ -439,13 +440,24 @@ export default function AdminManualOrderPage() {
       subscriptionType: draft.subscriptionType,
       trialDays: draft.subscriptionType === 'trial' ? Number(draft.trialDays) : undefined,
       subscriptionDays: defaultSubscriptionDays,
+      discountAmount: appliedDiscount,
       startDate: draft.startDate,
       mealItems: mealSelections,
       addonItems: addonSelections,
       byoItems: byoSelections,
     }),
-    [draft, distanceKm, deliveriesPerDay, defaultSubscriptionDays, mealSelections, addonSelections, byoSelections]
+    [draft, distanceKm, deliveriesPerDay, defaultSubscriptionDays, appliedDiscount, mealSelections, addonSelections, byoSelections]
   );
+
+  const handleApplyDiscount = () => {
+    const next = Math.min(grossTotal, discountPreview);
+    setDraft((prev) => ({
+      ...prev,
+      appliedDiscount: next,
+      discountValue: String(next),
+    }));
+    toast({ title: 'Discount applied', description: `Discount of ${formatCurrency(next)} applied to this manual order.` });
+  };
 
   const hasMealMissingTime = mealSelections.some((sel) => !sel.deliveryTime);
   const hasMealMissingStartDate = mealSelections.some((sel) => !sel.startDate);
@@ -1203,6 +1215,34 @@ export default function AdminManualOrderPage() {
           <div className="flex items-center justify-between">
             <span>Total Delivery Cost</span>
             <span className="font-medium">{formatCurrency(totalDeliveryCost)}</span>
+          </div>
+          <div className="space-y-2 rounded-lg border border-oz-neutral/30 p-3">
+            <div className="text-xs font-medium text-muted-foreground">Discount</div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                max={grossTotal}
+                step="1"
+                placeholder="Enter discount"
+                value={draft.discountValue}
+                onChange={(event) => setDraft((prev) => ({ ...prev, discountValue: event.target.value }))}
+                disabled={isLocked}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleApplyDiscount}
+                disabled={isLocked || discountPreview <= 0}
+                className="whitespace-nowrap"
+              >
+                Apply Discount
+              </Button>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Applied Discount</span>
+              <span>- {formatCurrency(appliedDiscount)}</span>
+            </div>
           </div>
           <div className="flex items-center justify-between text-base">
             <span className="font-semibold">Grand Total</span>

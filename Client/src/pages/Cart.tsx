@@ -92,6 +92,7 @@ const Cart = () => {
 	const baseDeliveryFee = quote?.deliveryFee ?? 0;
 	const computedDeliveryFee = hasLocation && quote ? baseDeliveryFee : 0;
 	const computedTotal = quote ? quote.subtotal + computedDeliveryFee - (quote.creditsApplied || 0) : 0;
+	const canApplyCredits = creditsToApplyLocal > 0 && creditsToApplyLocal <= walletBalance;
 
 	if (state.items.length === 0) {
 		return (
@@ -201,8 +202,21 @@ const Cart = () => {
 											Available: <span className="font-semibold text-oz-primary">{formatCurrency(walletBalance)}</span>
 										</p>
 										<div className="flex gap-2">
-											<Input type="number" min={0} max={walletBalance} value={creditsToApplyLocal} onChange={(e) => setCreditsToApplyLocal(parseFloat(e.target.value) || 0)} placeholder="Amount" className="flex-1" />
-											<Button onClick={handleApplyCredits} variant="outline" className="border-oz-accent text-oz-accent hover:bg-oz-accent/5" disabled={creditsToApplyLocal <= 0}>
+											<Input
+												type="number"
+												min={0}
+												max={walletBalance}
+												value={creditsToApplyLocal}
+												onChange={(e) => setCreditsToApplyLocal(Number(e.target.value) || 0)}
+												placeholder="Amount"
+												className="flex-1"
+											/>
+											<Button
+												onClick={handleApplyCredits}
+												variant="outline"
+												className="border-oz-accent text-oz-accent hover:bg-oz-accent hover:text-white disabled:border-oz-accent/30 disabled:text-oz-accent/40 disabled:bg-transparent"
+												disabled={!canApplyCredits}
+											>
 												Apply
 											</Button>
 										</div>
