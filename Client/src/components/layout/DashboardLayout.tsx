@@ -176,20 +176,19 @@ export function DashboardLayout() {
 			<div className="flex-1 min-w-0 h-screen overflow-hidden">
 				<div className="h-full overflow-y-auto scroll-smooth">
 					{/* Top Header (scrolls with content) */}
-					<header className="h-16 bg-white border-b border-oz-neutral flex items-center justify-between px-4 lg:px-6">
+					<header className="h-16 bg-white border-b border-oz-neutral flex items-center px-4 lg:px-6">
 						<Button
 							variant="ghost"
-							className="lg:hidden inline-flex items-center gap-2"
+							size="icon"
+							className="lg:hidden mr-2"
 							onClick={() => setSidebarOpen(true)}
 							aria-label="Open dashboard menu"
 						>
 							<Menu className="h-5 w-5" />
-							<span>Menu</span>
 						</Button>
-						<h1 className="font-semibold text-oz-primary lg:mr-auto lg:pl-2">
+						<h1 className="font-semibold text-oz-primary">
 							{sidebarLinks.find((link) => isActive(link.href))?.label || "Dashboard"}
 						</h1>
-						<div className="w-[84px] lg:hidden" aria-hidden="true" />
 					</header>
 
 					{/* Page Content */}
@@ -197,18 +196,6 @@ export function DashboardLayout() {
 						<Outlet />
 					</main>
 				</div>
-
-				{!sidebarOpen ? (
-					<Button
-						variant="default"
-						size="icon"
-						className="fixed bottom-4 right-4 z-30 h-12 w-12 rounded-full shadow-lg lg:hidden"
-						onClick={() => setSidebarOpen(true)}
-						aria-label="Open dashboard menu"
-					>
-						<Menu className="h-5 w-5" />
-					</Button>
-				) : null}
 			</div>
     </div>
   );
