@@ -1,5 +1,6 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 const Order = require('../models/Order.model');
 const User = require('../models/User.model');
@@ -267,7 +268,22 @@ const mapQuotedItemsToOrderItems = (quotedItems, requestItems, orderDetailsByIte
   });
 };
 
-const getAuthUserId = (req) => String(req?.user?.id || req?.user?.userId || '').trim();
+const getAuthUserId = (req) => {
+  const fromReqUser = String(req?.user?.id || req?.user?.userId || '').trim();
+  if (fromReqUser) return fromReqUser;
+
+  const authHeader = typeof req?.headers?.authorization === 'string' ? req.headers.authorization : '';
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (!match || !match[1]) return '';
+
+  try {
+    const token = String(match[1]).trim().replace(/^"+|"+$/g, '');
+    const payload = jwt.verify(token, ENV.JWT_SECRET);
+    return String(payload?.userId || payload?.id || '').trim();
+  } catch {
+    return '';
+  }
+};
 
 const initiateCheckout = async (req, res, next) => {
   try {
