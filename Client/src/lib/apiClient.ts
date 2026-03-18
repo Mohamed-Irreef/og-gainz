@@ -105,16 +105,36 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (axios.isAxiosError(error)) {
       const requestStatus = Number((error.request as { status?: unknown } | undefined)?.status);
       const status = error.response?.status ?? (Number.isFinite(requestStatus) ? requestStatus : undefined);
 
-      // Keep auth state consistent if backend rejects the token.
+      // Do not clear token immediately on every 401. First verify whether
+      // session is truly expired to avoid false logout during transient failures.
       if (status === 401) {
-        authTokenStorage.clear();
-        localStorage.removeItem('oz-gainz-user');
-        localStorage.removeItem('user');
+        const currentToken = authTokenStorage.get();
+        const requestUrl = String(error.config?.url || '');
+        const isVerifyCall = requestUrl.includes('/auth/verify');
+
+        if (currentToken && !isVerifyCall && API_BASE_URL) {
+          try {
+            await axios.get(joinUrl(API_BASE_URL, '/auth/verify'), {
+              headers: {
+                Authorization: `Bearer ${currentToken}`,
+              },
+              timeout: 8000,
+            });
+          } catch {
+            authTokenStorage.clear();
+            localStorage.removeItem('oz-gainz-user');
+            localStorage.removeItem('user');
+          }
+        } else {
+          authTokenStorage.clear();
+          localStorage.removeItem('oz-gainz-user');
+          localStorage.removeItem('user');
+        }
       }
     }
 
