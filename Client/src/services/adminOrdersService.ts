@@ -1,4 +1,4 @@
-import { apiJson } from './apiClient';
+import { apiJson } from '@/lib/apiClient';
 
 export type AdminOrderLifecycleStatus = 'PAID' | 'CONFIRMED' | 'PREPARING' | 'OUT_FOR_DELIVERY' | 'DELIVERED';
 export type AdminOrderChangedBy = 'SYSTEM' | 'ADMIN';

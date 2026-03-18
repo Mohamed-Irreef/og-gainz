@@ -3,28 +3,40 @@ const jwt = require('jsonwebtoken');
 const { ENV } = require('../config/env.config');
 const User = require('../models/User.model');
 
+const sanitizeToken = (value) => {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  const unquoted = trimmed.replace(/^"+|"+$/g, '');
+  return unquoted || null;
+};
+
 const getBearerToken = (req) => {
   const header = req.headers.authorization;
-  if (!header || typeof header !== 'string') return null;
-  const [type, token] = header.split(' ');
-  if (type !== 'Bearer' || !token) return null;
-  return token;
+  if (typeof header === 'string') {
+    const match = header.match(/^Bearer\s+(.+)$/i);
+    if (match && match[1]) {
+      return sanitizeToken(match[1]);
+    }
+  }
+
+  // Optional fallback for proxies/clients that use a custom header.
+  const alt = req.headers['x-access-token'];
+  if (typeof alt === 'string') {
+    return sanitizeToken(alt);
+  }
+
+  return null;
 };
 
 module.exports = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.log(`[auth] Missing or invalid header: ${authHeader}`);
+    const token = getBearerToken(req);
+    if (!token) {
       return res.status(401).json({
         status: 'error',
         message: 'Authentication required',
       });
     }
-
-    const token = authHeader.split(" ")[1];
-    console.log(`[auth] Token present: ${token.substring(0, 10)}...`);
 
     const payload = jwt.verify(token, ENV.JWT_SECRET);
 

@@ -1,4 +1,4 @@
-import { apiJson, apiJsonNoCache } from './apiClient';
+import { apiJson, apiJsonNoCache } from '@/lib/apiClient';
 
 export type KitchenDeliveryStatus = 'PENDING' | 'COOKING' | 'PACKED' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'SKIPPED';
 export type KitchenDeliveryChangedBy = 'SYSTEM' | 'ADMIN' | 'KITCHEN';

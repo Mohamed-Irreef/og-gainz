@@ -1,4 +1,4 @@
-import { apiJsonNoCache, apiJson } from './apiClient';
+import { apiJsonNoCache, apiJson } from '@/lib/apiClient';
 
 export type AdminSubscriptionKind = 'customMeal' | 'addon' | 'mealPack';
 export type AdminMutableSubscriptionKind = 'customMeal' | 'addon';

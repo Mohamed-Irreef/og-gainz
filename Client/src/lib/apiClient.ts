@@ -3,6 +3,25 @@ import axios, { AxiosError, type AxiosRequestConfig, type AxiosResponse } from '
 const TOKEN_STORAGE_KEY = 'oz-gainz-token';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+const sanitizeToken = (value: string | null) => {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  // Tolerate legacy storage values like '"<jwt>"'.
+  const unquoted = trimmed.replace(/^"+|"+$/g, '');
+  return unquoted || null;
+};
+
+const getStoredToken = () => {
+  const token = sanitizeToken(localStorage.getItem(TOKEN_STORAGE_KEY));
+  if (!token) return null;
+
+  // Self-heal storage if token was persisted with extra quotes/whitespace.
+  if (token !== localStorage.getItem(TOKEN_STORAGE_KEY)) {
+    localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  }
+  return token;
+};
+
 const joinUrl = (base: string, path: string) => {
   const normalizedBase = base.replace(/\/+$/, '');
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -31,8 +50,8 @@ const isRetryable = (err: unknown) => {
 
 export const authTokenStorage = {
   key: TOKEN_STORAGE_KEY,
-  get: () => localStorage.getItem(TOKEN_STORAGE_KEY),
-  set: (token: string) => localStorage.setItem(TOKEN_STORAGE_KEY, token),
+  get: () => getStoredToken(),
+  set: (token: string) => localStorage.setItem(TOKEN_STORAGE_KEY, sanitizeToken(token) || token),
   clear: () => localStorage.removeItem(TOKEN_STORAGE_KEY),
 };
 
@@ -44,7 +63,7 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("oz-gainz-token");
+  const token = getStoredToken();
 
   if (token) {
     if (config.headers) {
@@ -69,20 +88,46 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error)) {
+      const requestStatus = Number((error.request as { status?: unknown } | undefined)?.status);
+      const status = error.response?.status ?? (Number.isFinite(requestStatus) ? requestStatus : undefined);
+
+      // Keep auth state consistent if backend rejects the token.
+      if (status === 401) {
+        authTokenStorage.clear();
+        localStorage.removeItem('oz-gainz-user');
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export default apiClient;
 
 const normalizeAxiosError = (err: unknown) => {
   if (!axios.isAxiosError(err)) return err;
 
-  const status = err.response?.status;
+  const requestStatus = Number((err.request as { status?: unknown } | undefined)?.status);
+  const status = err.response?.status ?? (Number.isFinite(requestStatus) ? requestStatus : undefined);
   const data = err.response?.data as unknown;
-  const message =
+
+  const messageFromBody =
     data && typeof data === 'object' && 'message' in data
       ? String((data as { message?: unknown }).message)
-      : err.message || 'Request failed';
+      : undefined;
+
+  const fallbackMessage = status === 401
+    ? 'Authentication required. Please log in again.'
+    : (err.message || 'Request failed');
+
+  const message = messageFromBody || fallbackMessage;
 
   const normalized = new Error(message) as Error & { status?: number };
-  if (status) normalized.status = status;
+  if (typeof status === 'number' && status > 0) normalized.status = status;
   return normalized;
 };
 
