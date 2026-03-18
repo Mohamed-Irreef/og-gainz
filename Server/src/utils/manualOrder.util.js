@@ -106,12 +106,12 @@ const getInvoiceLogoSrc = () => {
   if (cachedInvoiceLogoSrc) return cachedInvoiceLogoSrc;
 
   try {
-    const logoPath = path.resolve(__dirname, '../../../Client/public/home/logo.png');
+    const logoPath = path.resolve(__dirname, '../../../Client/public/home/secondarylogo.png');
     const logoBuffer = fs.readFileSync(logoPath);
     cachedInvoiceLogoSrc = `data:image/png;base64,${logoBuffer.toString('base64')}`;
     return cachedInvoiceLogoSrc;
   } catch (_) {
-    cachedInvoiceLogoSrc = 'https://www.oggainz.com/home/logo.png';
+    cachedInvoiceLogoSrc = 'https://www.oggainz.com/home/secondarylogo.png';
     return cachedInvoiceLogoSrc;
   }
 };

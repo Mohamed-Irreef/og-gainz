@@ -238,7 +238,7 @@ export function AdminLayout() {
 							<Button
 								variant="ghost"
 								size="icon"
-								className="lg:hidden"
+                className="lg:hidden text-oz-primary border border-oz-neutral/70 bg-white shadow-sm hover:bg-oz-neutral/20"
 								onClick={() => setSidebarOpen(true)}
 							>
 								<Menu className="h-5 w-5" />

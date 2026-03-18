@@ -180,7 +180,7 @@ export function DashboardLayout() {
 						<Button
 							variant="ghost"
 							size="icon"
-							className="lg:hidden mr-2"
+							className="lg:hidden mr-2 text-oz-primary border border-oz-neutral/70 bg-white shadow-sm hover:bg-oz-neutral/20"
 							onClick={() => setSidebarOpen(true)}
 							aria-label="Open dashboard menu"
 						>
